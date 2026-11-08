@@ -44,7 +44,7 @@
           '<div class="bar pr-bar"><i style="width:' + Math.round(100 * solved / t.scenarios.length) + '%"></i></div>' +
           '<div class="pr-tree-meta tnum">' + solved + " of " + t.scenarios.length + " scenarios solved without a miss</div>" +
           '<div class="row"><button class="btn primary" data-run="' + t.id + '">Practice scenarios</button><button class="btn" data-explore="' + t.id + '">Explore the tree</button>' +
-          (t.sorter ? '<button class="btn" data-sorter="' + t.id + '">Prong Two sorter</button>' : "") + "</div></div>";
+          (t.sorter ? '<button class="btn" data-sorter="' + t.id + '">' + esc(sortCfg(t).title) + "</button>" : "") + "</div></div>";
       }).join("");
     } else if (S.tab === "drills") {
       h += drillHtml();
@@ -145,16 +145,19 @@
   }
 
   // ---------- sorter --------------------------------------------------------
+  // A tree's sorter: items go into one of cfg.buckets. Items use a (bucket index) or the older ok flag (two buckets).
+  function sortCfg(t) { return t.sorterCfg || { title: "Prong Two sorter", lede: "Does this additional element help the claim (integrate the exception, or add significantly more), or not?", buckets: ["Helps eligibility", "Doesn't help"] }; }
+  function sortAns(it) { return it.a != null ? it.a : it.ok ? 0 : 1; }
   function sorterHtml() {
-    var z = S.sort, it = z.items[z.pos % z.items.length];
-    var h = back("All trees") + '<div class="pr-head"><h2>Prong Two sorter</h2><span class="label tnum">' + z.ok + " / " + z.n + " right</span></div>" +
-      '<p class="lede">Does this additional element help the claim (integrate the exception, or add significantly more), or not?</p>' +
-      '<div class="pr-node"><div class="pr-q">' + esc(it.t) + "</div>";
+    var z = S.sort, cfg = sortCfg(z.t), it = z.items[z.pos % z.items.length], two = cfg.buckets.length === 2;
+    var h = back("All trees") + '<div class="pr-head"><h2>' + esc(cfg.title) + '</h2><span class="label tnum">' + z.ok + " / " + z.n + " right</span></div>" +
+      '<p class="lede">' + cfg.lede + '</p><div class="pr-node"><div class="pr-q">' + esc(it.t) + "</div>";
     if (z.ans == null) {
-      h += '<div class="pr-opts two"><button class="pr-opt" data-sort="1">Helps eligibility</button><button class="pr-opt" data-sort="0">Doesn\'t help</button></div>';
+      h += '<div class="pr-opts' + (two ? " two" : "") + '">' + cfg.buckets.map(function (b, i) { return '<button class="pr-opt" data-sort="' + i + '">' + esc(b) + "</button>"; }).join("") + "</div>";
     } else {
-      var ok = (z.ans === 1) === it.ok;
-      h += '<div class="pr-fb ' + (ok ? "good" : "") + '" aria-live="polite"><b>' + (ok ? "Right." : "Not quite.") + "</b> " + (it.ok ? "It helps: " : "It doesn't help: ") + esc(it.why) + '<div class="sec">' + esc(it.cite) + '</div></div><button class="btn primary" data-act="snext">Next</button>';
+      var right = sortAns(it), ok = z.ans === right;
+      if (!two) h += '<div class="pr-opts">' + cfg.buckets.map(function (b, i) { return '<button class="pr-opt ' + (i === right ? "right" : i === z.ans ? "wrong" : "") + '" disabled>' + esc(b) + "</button>"; }).join("") + "</div>";
+      h += '<div class="pr-fb ' + (ok ? "good" : "") + '" aria-live="polite"><b>' + (ok ? "Right." : "Not quite.") + "</b> " + esc(cfg.buckets[right]) + ": " + esc(it.why) + '<div class="sec">' + esc(it.cite) + '</div></div><button class="btn primary" data-act="snext">Next</button>';
     }
     return h + "</div>";
   }
@@ -267,10 +270,10 @@
     else if (d.run) { startRun(d.run); top(); }
     else if (d.weak) { var p = d.weak.split("."); startRun(p[0], p[1]); top(); }
     else if (d.explore) { S.mode = "explore"; S.ex = { t: treeById(d.explore), trail: [treeById(d.explore).start] }; draw(); top(); }
-    else if (d.sorter) { S.mode = "sort"; S.sort = { items: shuffle(treeById(d.sorter).sorter), pos: 0, n: 0, ok: 0, ans: null }; draw(); top(); }
+    else if (d.sorter) { S.mode = "sort"; S.sort = { t: treeById(d.sorter), items: shuffle(treeById(d.sorter).sorter), pos: 0, n: 0, ok: 0, ans: null }; draw(); top(); }
     else if (d.opt != null) answer(+d.opt);
     else if (d.go != null) { var x = S.ex, cur = x.trail[x.trail.length - 1]; x.trail.push(x.t.nodes[cur].options[+d.go].next); draw(); }
-    else if (d.sort != null) { var z = S.sort, it = z.items[z.pos % z.items.length]; z.ans = +d.sort; z.n++; if ((z.ans === 1) === it.ok) z.ok++; draw(); }
+    else if (d.sort != null) { var z = S.sort, it = z.items[z.pos % z.items.length]; z.ans = +d.sort; z.n++; if (z.ans === sortAns(it)) z.ok++; draw(); }
     else if (d.kind) { S.kind = d.kind; S.q = null; S.picked = null; draw(); }
     else if (d.pick != null) pick(+d.pick);
     else if (d.ff) { S.ff.mode = d.ff; S.ff.q = null; draw(); }

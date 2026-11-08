@@ -19,4 +19,10 @@ for (const t of TREES) {
   });
   console.log(`${t.id}: ${t.scenarios.length} scenarios cover ${Object.keys(leaves).length}/${Object.keys(t.leaves).length} outcomes`);
 }
+for (const t of TREES) if (t.sorter) {
+  const nb = t.sorterCfg ? t.sorterCfg.buckets.length : 2;
+  t.sorter.forEach((it, i) => { const a = it.a != null ? it.a : (it.ok ? 0 : 1); assert.ok(Number.isInteger(a) && a >= 0 && a < nb && it.why && it.cite, t.id + " sorter #" + i); });
+  if (t.sorterCfg) for (let b = 0; b < nb; b++) assert.ok(t.sorter.some(it => it.a === b), t.id + ": bucket " + b + " has no items");
+  console.log(t.id + " sorter: " + t.sorter.length + " items, " + nb + " buckets");
+}
 console.log("trees: " + n + " scenarios valid");
