@@ -145,6 +145,7 @@ details.chk p{margin:8px 0 0;color:var(--muted)}
 <nav role="tablist">
   <button role="tab" data-v="learn">Learn</button>
   <button role="tab" data-v="cards">Flashcards</button>
+  <button role="tab" data-v="practice">Practice</button>
   <button role="tab" data-v="mpep">MPEP map</button>
   <button role="tab" data-v="misses">Miss log</button>
   <button role="tab" data-v="mock">Mock timer</button>
@@ -166,6 +167,10 @@ details.chk p{margin:8px 0 0;color:var(--muted)}
   </div>
   <div class="boxes" id="boxes"></div>
   <div id="cardArea"></div>
+</section>
+
+<section id="v-practice" hidden>
+  <div id="practiceArea"></div>
 </section>
 
 <section id="v-mpep" hidden>
@@ -580,9 +585,9 @@ function renderPlan(){$("#planList").innerHTML=PLAN.map(([w,t,d],i)=>`<label cla
   document.querySelectorAll("[data-p]").forEach(c=>c.onchange=()=>{plan[c.dataset.p]=c.checked;store.set("plan",plan);renderPlan()})}
 
 /* ---------- Routing ---------- */
-const VIEWS=["learn","cards","mpep","misses","mock","plan"];
+const VIEWS=["learn","cards","practice","mpep","misses","mock","plan"];
 function show(v){if(!VIEWS.includes(v))v="learn";VIEWS.forEach(x=>{$("#v-"+x).hidden=x!==v;document.querySelector(`nav [data-v="${x}"]`).setAttribute("aria-selected",x===v)});
-  ({learn:renderLearn,cards:renderCards,mpep:renderMpep,misses:renderLog,mock:()=>{renderMock();renderScores()},plan:renderPlan})[v]()}
+  ({learn:renderLearn,cards:renderCards,practice:()=>window.renderPractice&&renderPractice(),mpep:renderMpep,misses:renderLog,mock:()=>{renderMock();renderScores()},plan:renderPlan})[v]()}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="learn"){openMod=null;if(location.hash==="#learn")renderLearn()}location.hash=b.dataset.v});
 window.addEventListener("hashchange",()=>show(location.hash.slice(1)));
 show(location.hash.slice(1));

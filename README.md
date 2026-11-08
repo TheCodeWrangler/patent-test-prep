@@ -15,6 +15,8 @@ Installable on Android as a web app; progress is saved in the browser.
 | `VERSION` | Shown in the app header. Bump it for every user-visible change; it also renames the offline cache so installed copies update. |
 | `audio.json` | Where podcast episodes live: `{"base": "<url prefix>", "files": {"0": "ep0.m4a", ...}}`. Episodes without a file fall back to the NotebookLM link. |
 | `src/assets/infographic.png` + `infographic.json` | The "Visual overview" card on the Learn page. The build makes the web-sized versions from the PNG; the JSON holds the title and the accuracy warning. |
+| `src/practice/` | The Practice tab: `dates.js` (USPTO date rules), `drills.js` (deadline question generators), `trees.js` (decision trees and scenarios, each step cited to the MPEP), `practice.js`/`.css` (UI). |
+| `tests/` | `node tests/<name>.test.js`. Checks the date engine against MPEP worked examples, fuzzes every drill generator, and walks every tree scenario. `deploy.sh` runs them first. |
 | `site/` | What gets deployed: nginx config, Dockerfile, service worker, manifest, icons. `site/index.html` is generated. |
 
 ## Deploy
@@ -23,6 +25,10 @@ Installable on Android as a web app; progress is saved in the browser.
 echo 1.2.0 > VERSION      # for a user-visible change
 ./deploy.sh               # builds, deploys to Cloud Run, checks the live URL
 ```
+
+### Adding a scenario or tree
+
+Add to `scenarios` in `src/practice/trees.js`: the fact pattern, the correct option index at each step (`path`), and a one-line `why`. Run `node tests/trees.test.js`, which fails if the path doesn't lead cleanly to an outcome.
 
 ### Replacing the infographic
 

@@ -21,14 +21,15 @@ ICONS = {
  "mpep":  I('<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>'),
  "misses":I('<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>'),
  "mock":  I('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/>'),
+ "practice": I('<circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="12" r="2.2"/><path d="M6 7.2v9.6M6 12h4a4 4 0 0 0 4-4V8M15.8 12H14"/>'),
  "plan":  I('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
 }
-SHORT = {"learn":"Learn","cards":"Cards","mpep":"MPEP","misses":"Misses","mock":"Timer","plan":"Plan"}
+SHORT = {"learn":"Learn","cards":"Cards","mpep":"MPEP","misses":"Misses","mock":"Timer","plan":"Plan","practice":"Practice"}
 def navbtn(m):
     v, label = m.group(1), m.group(2)
     return f'<button role="tab" data-v="{v}" aria-label="{label}">{ICONS[v]}<span class="long">{label}</span><span class="short">{SHORT[v]}</span></button>'
 s, n = re.subn(r'<button role="tab" data-v="(\w+)">([^<]+)</button>', navbtn, s)
-assert n == 6, n
+assert n == 7, n
 
 old_header = re.search(r'<div class="wrap">\s*<header>.*?</header>', s, re.S)
 assert old_header
@@ -92,7 +93,7 @@ nav{top:calc(env(safe-area-inset-top,0px) + 10px);margin:0 0 30px;padding:5px;ga
 nav::-webkit-scrollbar{display:none}
 nav button{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;font-weight:500;transition:background .15s,color .15s}
 nav button svg{width:17px;height:17px;flex:0 0 auto}
-nav button .short{display:none}
+nav button .long{display:none}
 nav button:hover{color:var(--ink);background:var(--paper)}
 nav button[aria-selected="true"]{background:var(--accent);color:var(--on-accent);box-shadow:0 4px 12px -4px color-mix(in srgb,var(--accent) 70%,transparent)}
 
@@ -165,13 +166,13 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{o
   .hero{padding-bottom:30px;padding-top:calc(env(safe-area-inset-top,0px) + 26px)}
   .wrap{margin-top:0;padding-top:24px;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
   nav{position:fixed;inset:auto 0 0 0;top:auto;margin:0;border-radius:0;border:0;border-top:1px solid var(--rule);
-    display:grid;grid-template-columns:repeat(6,1fr);gap:0;overflow:visible;z-index:20;
+    display:grid;grid-template-columns:repeat(7,1fr);gap:0;overflow:visible;z-index:20;
     padding:6px max(4px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(4px,env(safe-area-inset-left,0px));
     background:color-mix(in srgb,var(--sheet) 92%,transparent);box-shadow:0 -6px 24px -12px rgba(15,30,50,.25)}
-  nav button{flex-direction:column;gap:3px;padding:4px 0 2px;font-size:.68rem;font-weight:600;letter-spacing:.01em;border-radius:12px;min-width:0}
+  nav button{flex-direction:column;gap:3px;padding:4px 0 2px;font-size:.64rem;font-weight:600;letter-spacing:.01em;border-radius:12px;min-width:0}
   nav button .long{display:none}
   nav button .short{display:block}
-  nav button svg{width:22px;height:22px;padding:4px 16px;box-sizing:content-box;border-radius:999px;transition:background .2s}
+  nav button svg{width:22px;height:22px;padding:4px 12px;box-sizing:content-box;border-radius:999px;transition:background .2s}
   nav button:hover{background:none}
   nav button[aria-selected="true"]{background:none;color:var(--accent);box-shadow:none}
   nav button[aria-selected="true"] svg{background:var(--tint)}
@@ -311,7 +312,10 @@ audio_js = r"""
 s = s.replace('<p class="note">', '<p class="note">', 1)
 note_end = s.index('</p>', s.index('<p class="note">'))
 s = s[:note_end+4] + f'\n<p class="verline">Version {VERSION} · updated {BUILT}</p>' + s[note_end+4:]
-open(out, "w", encoding="utf-8").write(head + s + audio_js + js)
+def _read(*p): return open(os.path.join(HERE, "src", "practice", *p), encoding="utf-8").read()
+practice = ("<style>\n" + _read("practice.css") + "</style>\n<script>\n" +
+            "\n".join(_read(f) for f in ("dates.js", "drills.js", "trees.js", "practice.js")) + "\n</script>\n")
+open(out, "w", encoding="utf-8").write(head + s + practice + audio_js + js)
 
 print("ok")
 
