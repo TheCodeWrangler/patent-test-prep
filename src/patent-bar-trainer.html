@@ -346,8 +346,7 @@ check:[["A client pays you an advance for future work. Where does it go?","Into 
 deep:[["37 C.F.R. 11.101–11.118","Client-practitioner relationship rules"],["37 C.F.R. 11.301–11.306","Candor and fairness"],["MPEP 2001–2004","Duty of disclosure"],["MPEP 609","Information disclosure statements"]]},
 ];
 const NLM="https://notebooklm.link.google/r8sYAwuapHBy";
-const EPS={0:{name:"Overview of All 8",len:"66 min"},1:{name:"Chapter 1 Overview",len:"24 min"}};
-for(let i=2;i<=8;i++)EPS[i]={name:"Lesson "+i+" episode",len:"Ready"};
+const EPS={0:{name:"Overview of All 8",len:"66 min"},1:{name:"Chapter 1 Overview",len:"24 min"},2:{name:"Chapter 2 Overview",len:"24 min"},3:{name:"Chapter 3 Overview",len:"55 min"},4:{name:"Chapter 4 Overview",len:"46 min"},5:{name:"Chapter 5 Overview",len:"41 min"},6:{name:"Chapter 6 Overview",len:"62 min"},7:{name:"Chapter 7 Overview",len:"63 min"},8:{name:"Chapter 8 Overview",len:"54 min"}};
 function listenCard(n){const e=EPS[n],lbl=n===0?"Full-course podcast":"Lesson podcast";
   return`<div class="listen"><div style="min-width:0"><span class="label">${lbl}</span><div class="lt">${e?esc(e.name):"Generating in NotebookLM"}</div><div class="ld">${e?`${e.len} · opens in NotebookLM, then pick this episode in Studio`:"Not ready yet. Check back later today."}</div></div>${e?`<a class="btn primary" href="${NLM}" target="_blank" rel="noopener">▶ Listen</a>`:`<span class="chip">Queued</span>`}</div>`}
 let lp=store.get("learn",{read:{},deep:{}}),openMod=null;

@@ -1,6 +1,6 @@
 // Network-first: online you always get the latest version; offline the
 // last copy opens instead. Bump VERSION to drop old caches.
-const VERSION = "pbt-1.1.0";
+const VERSION = "pbt-1.2.0";
 const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/favicon.svg"];
 
 self.addEventListener("install", (e) => {

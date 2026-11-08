@@ -1,1 +1,5 @@
-{"base": "", "files": {}}
+{
+  "base": "https://storage.googleapis.com/ptj-patent-audio-50029/v1/",
+  "files": {"0": "ep0.m4a", "1": "ep1.m4a", "2": "ep2.m4a", "3": "ep3.m4a", "4": "ep4.m4a",
+            "5": "ep5.m4a", "6": "ep6.m4a", "7": "ep7.m4a", "8": "ep8.m4a"}
+}
