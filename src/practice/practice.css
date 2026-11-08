@@ -1,5 +1,6 @@
 /* Practice tab */
-.pr-tabs{margin:0 0 18px}
+.pr-tabs{margin:0 0 18px;max-width:100%;overflow-x:auto}
+.pr-tabs button{white-space:nowrap}
 .pr-back{display:inline-flex;align-items:center;gap:4px;background:none;border:0;color:var(--accent);font:600 .88rem var(--body);padding:6px 2px;margin:0 0 6px;cursor:pointer}
 .pr-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .pr-head h2{margin:0}

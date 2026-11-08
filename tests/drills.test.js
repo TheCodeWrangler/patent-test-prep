@@ -39,3 +39,11 @@ console.log("drills: " + n + " checks passed");
   assert.strictEqual(months(D(2024,3,20), D(2024,4,15), D(2024,5,10)), 2); n++;
   console.log("final-rejection cases passed; total " + n);
 }
+// PCT answers are generated only on business days (no weekend rule needed)
+for (let i = 0; i < 2000; i++) {
+  const q = DRILLS._G.pct(); const c = q.choices.find(c => c.correct).label;
+  const [, mon, day, yr] = c.match(/^\w{3}, (\w{3}) (\d+), (\d{4})/);
+  const d = PD.d(+yr, ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon) + 1, +day);
+  assert.ok(!PD.closedReason(d), "PCT answer on a closed day: " + c); n++;
+}
+console.log("pct business-day check passed; total " + n);

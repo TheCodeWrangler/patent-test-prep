@@ -11,6 +11,8 @@ var DRILLS = (function (PD) {
     { id: "issue",   label: "Issue fee",           cite: "37 CFR 1.311(a); MPEP 1306" },
     { id: "appeal",  label: "Appeal brief",        cite: "37 CFR 41.37(a); MPEP 1205.01" },
     { id: "prov",    label: "Provisional → nonprovisional", cite: "35 U.S.C. 119(e); 37 CFR 1.7(b)" },
+    { id: "prio",    label: "Foreign priority",    cite: "35 U.S.C. 119(a), 172; 37 CFR 1.55; MPEP 213.03" },
+    { id: "pct",     label: "PCT deadlines",       cite: "PCT Art. 22, 39; Rule 54bis.1; MPEP 1842, 1893.01" },
   ];
 
   // ---- randomness helpers -------------------------------------------------
@@ -245,6 +247,64 @@ var DRILLS = (function (PD) {
         "A petition to restore the benefit claim can stretch this to 14 months if the delay was unintentional, but that's a separate remedy.",
       ]),
       cite: "35 U.S.C. 119(e); 37 CFR 1.7(b), 1.78; MPEP 211.01(a)",
+    };
+  };
+
+  G.prio = function () {
+    var design = Math.random() < .3, months = design ? 6 : 12;
+    var filed = interesting(function () { return randDate(2024, 2028); }, function (m) { return A(m, months); }, .7);
+    var raw = A(filed, months), rn = PD.rollNote(raw);
+    return {
+      kind: "prio",
+      facts: "A " + (design ? "<b>design</b>" : "<b>utility</b>") + " application was first filed in Germany on <b>" + PD.fmtLong(filed) + "</b>.",
+      prompt: "What is the last day to file the U.S. " + (design ? "design" : "nonprovisional") + " application and still claim priority (without a petition to restore)?",
+      choices: dateChoices(rn.date, [raw, A(filed, design ? 12 : 6), PD.addDays(raw, -1), A(filed, months + 2)]),
+      explain: li([
+        "The Paris Convention priority period is <b>" + months + " months</b> for " + (design ? "designs (35 U.S.C. 172)" : "utility applications (35 U.S.C. 119(a))") + ": " + F(raw) + ".",
+        rn.text + " The weekend/holiday rule applies to this period (35 U.S.C. 21(b)).",
+        design ? "Watch the trap: the 12-month utility period does not apply to designs." : "Restoring priority by petition (up to 2 more months, unintentional delay) is a separate remedy.",
+      ]),
+      cite: "35 U.S.C. 119(a), 172, 21(b); 37 CFR 1.55; MPEP 213.03",
+    };
+  };
+
+  // PCT dates count from the PRIORITY date. Only business-day results are
+  // generated, so no weekend rule is needed for these questions.
+  G.pct = function () {
+    var P, nat, tries = 0;
+    do { P = randDate(2023, 2027); nat = A(P, 30); tries++; } while (PD.closedReason(nat) && tries < 50);
+    var filedIA = PD.addDays(A(P, 12), -ri(1, 25));   // international application filed within 12 months of priority
+    if (Math.random() < .55) {
+      return {
+        kind: "pct",
+        facts: "A U.S. provisional was filed on <b>" + PD.fmtLong(P) + "</b>. A PCT application claiming its priority was filed on <b>" + PD.fmtLong(filedIA) + "</b>. No early processing is requested.",
+        prompt: "What is the deadline to enter the U.S. national stage?",
+        choices: dateChoices(nat, [A(filedIA, 30), A(P, 18), A(P, 31), A(filedIA, 18)]),
+        explain: li([
+          "The national stage deadline is <b>30 months from the priority date</b>, the earliest date claimed (" + F(P) + "), not from the PCT filing date.",
+          "30 months from " + F(P) + " is <b>" + F(nat) + "</b>.",
+          "For reference: international publication happens at about 18 months from priority.",
+        ]),
+        cite: "PCT Art. 22(1), 39(1)(a); 35 U.S.C. 371; MPEP 1893.01",
+      };
+    }
+    var d22, isr, d3, ans, tries2 = 0;
+    do {
+      P = randDate(2023, 2027); d22 = A(P, 22);
+      isr = PD.addDays(A(P, 16), ri(-40, 200)); d3 = A(isr, 3);
+      ans = PD.cmp(d3, d22) > 0 ? d3 : d22; tries2++;
+    } while ((PD.closedReason(ans) || PD.closedReason(d22) || PD.closedReason(d3)) && tries2 < 80);
+    return {
+      kind: "pct",
+      facts: "A PCT application claims priority to an application filed <b>" + PD.fmtLong(P) + "</b>. The international search report and written opinion are transmitted to the applicant on <b>" + PD.fmtLong(isr) + "</b>.",
+      prompt: "What is the last day to file a Demand for international preliminary examination (Chapter II)?",
+      choices: dateChoices(ans, [PD.cmp(d3, d22) > 0 ? d22 : d3, A(P, 30), A(P, 19), A(isr, 2)]),
+      explain: li([
+        "The Demand is due by whichever expires <b>later</b>: 3 months from transmittal of the search report and written opinion, or 22 months from the priority date.",
+        "3 months from " + F(isr) + " is " + F(d3) + "; 22 months from " + F(P) + " is " + F(d22) + ".",
+        "The later one is <b>" + F(ans) + "</b>.",
+      ]),
+      cite: "PCT Rule 54bis.1; MPEP 1842",
     };
   };
 

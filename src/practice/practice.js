@@ -30,7 +30,7 @@
   }
   function home() {
     var h = '<h2>Practice</h2><p class="lede">Run the MPEP\'s decision logic on real fact patterns, and drill deadlines until they\'re automatic. Every step cites the MPEP section it comes from.</p>' +
-      '<div class="seg pr-tabs" role="group" aria-label="Practice type"><button data-tab="trees" aria-pressed="' + (S.tab === "trees") + '">Decision trees</button><button data-tab="drills" aria-pressed="' + (S.tab === "drills") + '">Deadline drills</button></div>';
+      '<div class="seg pr-tabs" role="group" aria-label="Practice type"><button data-tab="trees" aria-pressed="' + (S.tab === "trees") + '">Decision trees</button><button data-tab="drills" aria-pressed="' + (S.tab === "drills") + '">Deadlines</button><button data-tab="find" aria-pressed="' + (S.tab === "find") + '">Find it fast</button></div>';
     if (S.tab === "trees") {
       var ws = weakSpots();
       if (ws.length) {
@@ -46,10 +46,13 @@
           '<div class="row"><button class="btn primary" data-run="' + t.id + '">Practice scenarios</button><button class="btn" data-explore="' + t.id + '">Explore the tree</button>' +
           (t.sorter ? '<button class="btn" data-sorter="' + t.id + '">Prong Two sorter</button>' : "") + "</div></div>";
       }).join("");
-    } else {
+    } else if (S.tab === "drills") {
       h += drillHtml();
+    } else {
+      h += findHtml();
     }
     root().innerHTML = h;
+    if (S.tab === "find" && S.ff && S.ff.picked == null) S.ff.t0 = Date.now();
   }
 
   // ---------- scenarios -----------------------------------------------------
@@ -184,6 +187,70 @@
     S.picked = i; draw();
   }
 
+  // ---------- find it fast ------------------------------------------------
+  // Open-book exam: speed comes from knowing where to search. Built from the
+  // MPEP's own section headings (MPEP_INDEX), so every answer is the source.
+  var W = { "2100": 3, "0700": 3, "0600": 2, "0200": 2, "1200": 2, "1400": 2, "2200": 1.5, "0800": 1.5, "1800": 1.5, "2000": 1.5,
+            "1300": 1, "2700": 1, "2500": 1, "0500": 1, "0400": 1, "0300": 1, "0100": .8, "1500": .8, "2800": .7, "0900": .6,
+            "1000": .6, "1100": .6, "1900": .6, "1600": .5, "2300": .5, "2400": .5, "2900": .5, "1700": .4, "2600": .3 };
+  var CONF = [["0200", "0600", "1800", "0500"], ["0700", "1200", "2100", "0800"], ["1400", "2200", "2800", "2600"], ["1300", "2500", "2700", "1100"],
+              ["0300", "0400", "1000", "0500"], ["1500", "1600", "2900", "2400"], ["2000", "1900", "2200", "1100"], ["2100", "2400", "0800", "0700"]];
+  function chOf(sec) { var n = sec.match(/^\d+/)[0]; return n.length === 3 ? "0" + n[0] + "00" : n.slice(0, 2) + "00"; }
+  function chLabel(ch) { return "Chapter " + ch.replace(/^0/, "") + " · " + MPEP_INDEX.chapters[ch]; }
+  var byCh = null;
+  function ffQuestion(mode) {
+    if (mode === "sit") {
+      var sits = MPEP_INDEX.situations, it = sits[Math.floor(Math.random() * sits.length)];
+      // Plausible distractors: situations from nearby chapters, with a little randomness.
+      var num = function (sec) { return +chOf(sec); };
+      var others = sits.filter(function (x) { return x[1] !== it[1]; })
+        .map(function (x) { return [Math.abs(num(x[1]) - num(it[1])) + Math.random() * 500, x]; })
+        .sort(function (p, q) { return p[0] - q[0]; }).slice(0, 3).map(function (p) { return p[1]; });
+      return { mode: mode, prompt: esc(it[0]), sub: "Which MPEP section would you search?",
+               choices: shuffle([it].concat(others).map(function (x) { return { label: "§ " + x[1] + " · " + x[2], correct: x === it }; })),
+               answer: "§ " + it[1] + " · " + it[2] + " (" + chLabel(chOf(it[1])) + ")" };
+    }
+    if (!byCh) { byCh = {}; MPEP_INDEX.sections.forEach(function (s) { var c = chOf(s[0]); (byCh[c] = byCh[c] || []).push(s); }); }
+    var chs = Object.keys(byCh), tot = 0; chs.forEach(function (c) { tot += W[c] || .5; });
+    var r = Math.random() * tot, ch = chs[0];
+    for (var i = 0; i < chs.length; i++) { r -= W[chs[i]] || .5; if (r <= 0) { ch = chs[i]; break; } }
+    var sec = byCh[ch][Math.floor(Math.random() * byCh[ch].length)];
+    var pool = []; CONF.forEach(function (g) { if (g.indexOf(ch) >= 0) pool = pool.concat(g); });
+    pool = shuffle(pool.filter(function (c) { return c !== ch && MPEP_INDEX.chapters[c]; }));
+    var opts = [ch];
+    pool.concat(shuffle(Object.keys(MPEP_INDEX.chapters))).forEach(function (c) { if (opts.length < 4 && opts.indexOf(c) < 0) opts.push(c); });
+    return { mode: mode, prompt: "“" + esc(sec[1]) + "”", sub: "Which chapter is this section in?",
+             choices: shuffle(opts.map(function (c) { return { label: chLabel(c), correct: c === ch }; })),
+             answer: "§ " + sec[0] + " is in " + chLabel(ch) };
+  }
+  function findHtml() {
+    var f = S.ff = S.ff || { mode: "sit", n: 0, ok: 0, ms: 0, streak: 0 };
+    if (!f.q) { f.q = ffQuestion(f.mode); f.picked = null; }
+    var st = (P.ff || {})[f.mode];
+    var h = '<p class="lede" style="margin-bottom:12px">The exam is open-book. Points come from knowing <b>where</b> to search before the clock runs out.</p>' +
+      '<div class="pr-kinds" role="group" aria-label="Find-it-fast mode"><button class="pr-kind" data-ff="sit" aria-pressed="' + (f.mode === "sit") + '">Situations → section</button>' +
+      '<button class="pr-kind" data-ff="ch" aria-pressed="' + (f.mode === "ch") + '">Section → chapter</button></div>' +
+      '<div class="pr-node"><div class="pr-drill-top"><span class="label tnum">' + (f.n ? f.ok + " / " + f.n + " · avg " + (f.ms / f.n / 1000).toFixed(1) + " s · streak " + f.streak : (st && st[0] ? "All-time " + Math.round(100 * st[1] / st[0]) + "%" : "Answer fast; you're timed")) + "</span></div>" +
+      '<div class="label">' + f.q.sub + '</div><div class="pr-q">' + f.q.prompt + "</div>";
+    if (f.picked == null) {
+      h += '<div class="pr-opts">' + f.q.choices.map(function (c, i) { return '<button class="pr-opt" data-ffpick="' + i + '">' + esc(c.label) + "</button>"; }).join("") + "</div>";
+    } else {
+      var ok = f.q.choices[f.picked].correct;
+      h += '<div class="pr-opts">' + f.q.choices.map(function (c, i) {
+        return '<button class="pr-opt ' + (c.correct ? "right" : i === f.picked ? "wrong" : "") + '" disabled>' + esc(c.label) + "</button>";
+      }).join("") + '</div><div class="pr-fb ' + (ok ? "good" : "") + '" aria-live="polite"><b>' + (ok ? "Right" : "Not quite") + "</b> · " + (f.last / 1000).toFixed(1) + " s<p>" + esc(f.q.answer) + "</p></div>" +
+        '<div class="row"><button class="btn primary" data-act="ffnext">Next</button></div>';
+    }
+    return h + "</div>";
+  }
+  function ffPick(i) {
+    var f = S.ff, ok = f.q.choices[i].correct;
+    f.last = Math.min(Date.now() - (f.t0 || Date.now()), 600000);
+    f.n++; f.ms += f.last; if (ok) { f.ok++; f.streak++; } else f.streak = 0;
+    P.ff = P.ff || {}; var s = P.ff[f.mode] || [0, 0]; s[0]++; if (ok) s[1]++; P.ff[f.mode] = s; save();
+    f.picked = i; draw();
+  }
+
   // ---------- render + events ----------------------------------------------
   function draw() {
     var el = root(); if (!el) return;
@@ -206,6 +273,9 @@
     else if (d.sort != null) { var z = S.sort, it = z.items[z.pos % z.items.length]; z.ans = +d.sort; z.n++; if ((z.ans === 1) === it.ok) z.ok++; draw(); }
     else if (d.kind) { S.kind = d.kind; S.q = null; S.picked = null; draw(); }
     else if (d.pick != null) pick(+d.pick);
+    else if (d.ff) { S.ff.mode = d.ff; S.ff.q = null; draw(); }
+    else if (d.ffpick != null) ffPick(+d.ffpick);
+    else if (d.act === "ffnext") { S.ff.q = null; draw(); }
     else if (d.act === "home") { S.mode = "home"; draw(); top(); }
     else if (d.act === "cont") advance();
     else if (d.act === "next") { S.run.pos++; newScenario(); top(); }
