@@ -31,3 +31,11 @@ for (let i = 0; i < 200; i++) {
   assert.ok(qs.every(q => q.choices.length >= 3), "every exam question has 3+ choices");
 }
 console.log("mock: " + n + " questions checked");
+// every tree has a coach lesson, and every lesson is a tree (or the deadlines topic)
+{
+  const { COACH_LESSONS: LESSONS } = require("../src/practice/coach-data.js");
+  const ids = new Set(TREES.map(t => t.id));
+  for (const t of TREES) assert.ok(LESSONS.some(l => l.id === t.id), "no coach lesson for tree " + t.id);
+  for (const l of LESSONS) { assert.ok(l.id === "dates" || ids.has(l.id), "lesson without a tree: " + l.id); assert.ok(l.why && l.traps.length && l.search.length, "lesson incomplete: " + l.id); }
+  console.log("coach lessons: " + LESSONS.length + " topics, all mapped");
+}

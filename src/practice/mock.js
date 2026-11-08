@@ -15,6 +15,10 @@ var MOCK = (function (TREES, DRILLS) {
     mpf: "How should the examiner treat the limitation?",
     ptab: "What is the most likely outcome?",
     conflict: "Which statement is correct under the USPTO Rules of Professional Conduct?",
+    ids: "Will the examiner consider the IDS?",
+    revive: "What is the proper course of action?",
+    filing: "What filing date, if any, is the application entitled to?",
+    reexam: "What happens with the reexamination request?",
   };
   var SORT_ASK = {
     elig: "In the eligibility analysis, how should this additional element be treated?",
