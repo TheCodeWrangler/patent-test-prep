@@ -40,10 +40,19 @@ console.log("drills: " + n + " checks passed");
   console.log("final-rejection cases passed; total " + n);
 }
 // PCT answers are generated only on business days (no weekend rule needed)
-for (let i = 0; i < 2000; i++) {
-  const q = DRILLS._G.pct(); const c = q.choices.find(c => c.correct).label;
+for (let i = 0; i < 4000; i++) {
+  const q = i % 2 ? DRILLS._G.pct() : DRILLS._G.ptab(); const c = q.choices.find(c => c.correct).label;
   const [, mon, day, yr] = c.match(/^\w{3}, (\w{3}) (\d+), (\d{4})/);
   const d = PD.d(+yr, ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon) + 1, +day);
-  assert.ok(!PD.closedReason(d), "PCT answer on a closed day: " + c); n++;
+  assert.ok(!PD.closedReason(d), "PCT/PTAB answer on a closed day: " + c); n++;
 }
-console.log("pct business-day check passed; total " + n);
+console.log("pct/ptab business-day check passed; total " + n);
+
+// PTAB spot checks: rules applied to fixed dates
+{
+  const A = PD.addMonths, D = PD.d;
+  assert.strictEqual(PD.fmt(A(D(2025,5,13), 9)), PD.fmt(D(2026,2,13))); n++;   // PGR: grant Tue May 13 2025 -> Fri Feb 13 2026
+  assert.strictEqual(PD.fmt(PD.addDays(D(2025,3,3), 63)), PD.fmt(D(2025,5,5))); n++; // appeal: 63 days
+  for (let i = 0; i < 3000; i++) { const q = DRILLS._G.ptab(); assert.ok(/\d/.test(q.explain) && q.cite.length > 5); n++; }
+  console.log("ptab spot checks passed; total " + n);
+}

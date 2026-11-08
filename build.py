@@ -314,7 +314,7 @@ note_end = s.index('</p>', s.index('<p class="note">'))
 s = s[:note_end+4] + f'\n<p class="verline">Version {VERSION} · updated {BUILT}</p>' + s[note_end+4:]
 def _read(*p): return open(os.path.join(HERE, "src", "practice", *p), encoding="utf-8").read()
 practice = ("<style>\n" + _read("practice.css") + "</style>\n<script>\n" +
-            "\n".join(_read(f) for f in ("dates.js", "drills.js", "trees.js", "mpep-index.js", "practice.js")) + "\n</script>\n")
+            "\n".join(_read(f) for f in ("dates.js", "drills.js", "trees.js", "mpep-index.js", "coach-data.js", "mock.js", "coach.js", "practice.js")) + "\n</script>\n")
 open(out, "w", encoding="utf-8").write(head + s + practice + audio_js + js)
 
 print("ok")

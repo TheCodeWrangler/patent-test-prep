@@ -13,6 +13,7 @@ var DRILLS = (function (PD) {
     { id: "prov",    label: "Provisional → nonprovisional", cite: "35 U.S.C. 119(e); 37 CFR 1.7(b)" },
     { id: "prio",    label: "Foreign priority",    cite: "35 U.S.C. 119(a), 172; 37 CFR 1.55; MPEP 213.03" },
     { id: "pct",     label: "PCT deadlines",       cite: "PCT Art. 22, 39; Rule 54bis.1; MPEP 1842, 1893.01" },
+    { id: "ptab",    label: "PTAB trials",         cite: "35 U.S.C. 311–329; 37 CFR 42; 37 CFR 90.3" },
   ];
 
   // ---- randomness helpers -------------------------------------------------
@@ -307,6 +308,100 @@ var DRILLS = (function (PD) {
       cite: "PCT Rule 54bis.1; MPEP 1842",
     };
   };
+
+  // PTAB trial (IPR/PGR) clocks from 35 U.S.C. 311–329 and 37 CFR Part 42.
+  // As with PCT, only business-day answers are generated, so no weekend rule is needed.
+  function bizBase(gen, deadlineOf) {
+    var b, dl, t = 0;
+    do { b = gen(); dl = deadlineOf(b); t++; } while (PD.closedReason(dl) && t < 80);
+    return b;
+  }
+  function tuesday(y0, y1) { var d = randDate(y0, y1); return PD.addDays(d, (2 - d.getUTCDay() + 7) % 7); } // patents issue on Tuesdays
+  var PTAB = [
+    function () { // PGR window
+      var g = bizBase(function () { return tuesday(2024, 2028); }, function (x) { return A(x, 9); }), dl = A(g, 9);
+      return { facts: "A patent subject to the AIA's first-inventor-to-file provisions issued on <b>" + PD.fmtLong(g) + "</b>. A competitor wants to challenge it on §101 and §112 grounds.",
+        prompt: "What is the last day to file a petition for post-grant review?",
+        choices: dateChoices(dl, [A(g, 12), A(g, 6), A(g, 3), PD.addDays(dl, 1)]),
+        explain: li(["A PGR petition must be filed <b>no later than 9 months</b> after grant (or reissue).", "9 months from " + F(g) + " is <b>" + F(dl) + "</b>.", "PGR is the only AIA trial that can raise §101 and §112; IPR is limited to §102/§103 on patents and printed publications."]),
+        cite: "35 U.S.C. 321(b)–(c); 37 CFR 42.202(a)" };
+    },
+    function () { // IPR one-year bar
+      var sv = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 12); }), dl = A(sv, 12);
+      var filedSuit = PD.addDays(sv, -ri(5, 40));
+      return { facts: "The patent owner filed an infringement suit on " + PD.fmtLong(filedSuit) + " and <b>served the complaint</b> on the accused infringer on <b>" + PD.fmtLong(sv) + "</b>.",
+        prompt: "Absent a joinder request, what is the last day the accused infringer can file an IPR petition?",
+        choices: dateChoices(dl, [A(filedSuit, 12), A(sv, 9), A(sv, 6), A(filedSuit, 9)]),
+        explain: li(["IPR can't be instituted if the petition is filed <b>more than 1 year after the petitioner (or its real party in interest or privy) is served</b> with an infringement complaint.", "The clock runs from <b>service</b> (" + F(sv) + "), not from the filing of the suit.", "1 year from " + F(sv) + " is <b>" + F(dl) + "</b>. The bar doesn't apply to a petition accompanied by a joinder request."]),
+        cite: "35 U.S.C. 315(b); 37 CFR 42.101(b), 42.122(b)" };
+    },
+    function () { // preliminary response
+      var nt = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 3); }), dl = A(nt, 3), kind = pick(["inter partes review", "post-grant review"]);
+      return { facts: "The Board mails a notice on <b>" + PD.fmtLong(nt) + "</b> according a filing date to a petition for " + kind + ".",
+        prompt: "When is the patent owner's preliminary response due?",
+        choices: dateChoices(dl, [A(nt, 2), A(nt, 1), A(nt, 6), PD.addDays(nt, 30)]),
+        explain: li(["The preliminary response is due <b>no later than 3 months</b> after the notice according the petition a filing date.", "3 months from " + F(nt) + " is <b>" + F(dl) + "</b>.", "It can't include an amendment, but the owner may file a statutory disclaimer, or waive the response to speed things up."]),
+        cite: kind === "inter partes review" ? "35 U.S.C. 313; 37 CFR 42.107(b)" : "35 U.S.C. 323; 37 CFR 42.207(b)" };
+    },
+    function () { // institution decision
+      var nt, popr, filed = Math.random() < .55, base, dl, t = 0;
+      do { nt = mailDate(2024, 2028); popr = filed ? PD.addDays(A(nt, 3), -ri(0, 30)) : A(nt, 3); base = popr; dl = A(base, 3); t++; } while ((PD.closedReason(dl) || PD.closedReason(popr)) && t < 80);
+      return { facts: "A notice according an IPR petition a filing date was mailed on <b>" + PD.fmtLong(nt) + "</b>. " + (filed ? "The patent owner filed its preliminary response on <b>" + PD.fmtLong(popr) + "</b>." : "The patent owner <b>did not file</b> a preliminary response."),
+        prompt: "By what date must the institution decision be made?",
+        choices: dateChoices(dl, [A(nt, 3), A(nt, 6 + (filed ? 0 : 1)), A(base, 6), filed ? A(A(nt, 3), 3) : A(nt, 4)]),
+        explain: li(["The institution decision is due within <b>3 months after</b> the preliminary response is received, or, if none is filed, after the <b>last date it could have been filed</b>.",
+          filed ? "The response was filed " + F(popr) + "." : "The response was due 3 months after the notice: " + F(popr) + ".",
+          "3 months from " + F(base) + " is <b>" + F(dl) + "</b>. The institution decision is final and nonappealable (rehearing only)."]),
+        cite: "35 U.S.C. 314(b), 314(d); 37 CFR 42.107(b)" };
+    },
+    function () { // final written decision
+      var inst = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 18); }), one = A(inst, 12), ext = A(inst, 18);
+      while (PD.closedReason(one)) { inst = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 18); }); one = A(inst, 12); ext = A(inst, 18); }
+      var askExt = Math.random() < .4, ans = askExt ? ext : one;
+      return { facts: "The Board instituted inter partes review on <b>" + PD.fmtLong(inst) + "</b>." + (askExt ? " The Chief Administrative Patent Judge finds good cause to extend the deadline by the <b>maximum</b> allowed. There is no joinder." : " There is no joinder or extension."),
+        prompt: "By what date must the final written decision issue?",
+        choices: dateChoices(ans, askExt ? [one, A(inst, 24), A(inst, 15), A(inst, 21)] : [ext, A(inst, 6), A(inst, 9), A(inst, 15)]),
+        explain: li(["The final written decision is due <b>1 year</b> after institution: " + F(one) + ".", "For good cause it can be extended by <b>up to 6 months</b> (to " + F(ext) + "), or adjusted for joinder.", "Answer: <b>" + F(ans) + "</b>."]),
+        cite: "35 U.S.C. 316(a)(11), 326(a)(11); 37 CFR 42.100(c)" };
+    },
+    function () { // rehearing
+      var which = pick(["inst", "deny", "final"]), days = which === "inst" ? 14 : 30;
+      var d = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return PD.addDays(x, days); }), dl = PD.addDays(d, days);
+      var what = { inst: "a decision <b>instituting</b> inter partes review on one ground", deny: "a decision <b>denying</b> institution", final: "a <b>final written decision</b>" }[which];
+      return { facts: "On <b>" + PD.fmtLong(d) + "</b> the Board enters " + what + ". The dissatisfied party wants to request rehearing.",
+        prompt: "What is the last day to file the request for rehearing?",
+        choices: dateChoices(dl, [PD.addDays(d, days === 14 ? 30 : 14), PD.addDays(d, 63), A(d, 1), A(d, 2)]),
+        explain: li(["Rehearing requests are due <b>14 days</b> after a non-final decision or a decision <b>to institute</b>, and <b>30 days</b> after a final decision or a decision <b>not</b> to institute.", "So " + days + " days from " + F(d) + ": <b>" + F(dl) + "</b>.", "A rehearing request doesn't toll other times for taking action."]),
+        cite: "37 CFR 42.71(d)" };
+    },
+    function () { // appeal to the Federal Circuit
+      var d = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return PD.addDays(x, 63); }), dl = PD.addDays(d, 63);
+      return { facts: "The Board issues its final written decision in an IPR on <b>" + PD.fmtLong(d) + "</b>. No rehearing is requested.",
+        prompt: "What is the last day to file a notice of appeal to the Federal Circuit?",
+        choices: dateChoices(dl, [PD.addDays(d, 60), A(d, 2), PD.addDays(d, 30), A(d, 3)]),
+        explain: li(["A notice of appeal must be filed with the Director <b>no later than 63 days</b> after the final Board decision.", "63 days from " + F(d) + " is <b>" + F(dl) + "</b>.", "A timely rehearing request resets the 63 days to run from the decision on rehearing."]),
+        cite: "35 U.S.C. 142, 319; 37 CFR 90.3(a)–(b)" };
+    },
+    function () { // joinder motion and patent owner response
+      var inst = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 1); });
+      if (Math.random() < .5) {
+        var dl = A(inst, 1);
+        return { facts: "Inter partes review was instituted on <b>" + PD.fmtLong(inst) + "</b>. A second accused infringer, served with a complaint more than a year ago, files its own petition with a motion to join the instituted IPR.",
+          prompt: "What is the last day to file the joinder motion?",
+          choices: dateChoices(dl, [A(inst, 3), PD.addDays(inst, 14), A(inst, 2), A(inst, 12)]),
+          explain: li(["A request for joinder must be filed <b>no later than 1 month after institution</b> of the IPR to be joined.", "1 month from " + F(inst) + " is <b>" + F(dl) + "</b>.", "The 1-year bar after service of a complaint doesn't apply to a petition accompanied by a joinder request."]),
+          cite: "35 U.S.C. 315(b)–(c); 37 CFR 42.122(b)" };
+      }
+      inst = bizBase(function () { return mailDate(2024, 2028); }, function (x) { return A(x, 3); });
+      var dr = A(inst, 3);
+      return { facts: "Inter partes review was instituted on <b>" + PD.fmtLong(inst) + "</b>. The Board's order sets no date for the patent owner response.",
+        prompt: "When is the patent owner response due by default?",
+        choices: dateChoices(dr, [A(inst, 2), A(inst, 1), A(inst, 6), PD.addDays(inst, 30)]),
+        explain: li(["Unless a Board order says otherwise, the patent owner response is due <b>3 months from institution</b>.", "3 months from " + F(inst) + " is <b>" + F(dr) + "</b>."]),
+        cite: "37 CFR 42.120(b)" };
+    },
+  ];
+  G.ptab = function () { var q = pick(PTAB)(); q.kind = "ptab"; return q; };
 
   function make(kind) {
     var k = kind && G[kind] ? kind : pick(KINDS).id;

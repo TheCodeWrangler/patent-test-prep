@@ -1,7 +1,7 @@
 // Practice tab: decision-tree scenarios, tree explorer, Prong Two sorter,
 // and deadline drills. Uses the app's globals: $, esc, store, log, renderLog.
 (function () {
-  var S = { tab: "trees", mode: "home", kind: "all" };       // UI state (not persisted)
+  var S = { tab: "coach", mode: "home", kind: "all" };       // UI state (not persisted)
   var P = store.get("practice", { sc: {}, nd: {}, dr: {} }); // progress (persisted)
   function save() { store.set("practice", P); }
   function treeById(id) { return TREES.filter(function (t) { return t.id === id; })[0]; }
@@ -30,8 +30,10 @@
   }
   function home() {
     var h = '<h2>Practice</h2><p class="lede">Run the MPEP\'s decision logic on real fact patterns, and drill deadlines until they\'re automatic. Every step cites the MPEP section it comes from.</p>' +
-      '<div class="seg pr-tabs" role="group" aria-label="Practice type"><button data-tab="trees" aria-pressed="' + (S.tab === "trees") + '">Decision trees</button><button data-tab="drills" aria-pressed="' + (S.tab === "drills") + '">Deadlines</button><button data-tab="find" aria-pressed="' + (S.tab === "find") + '">Find it fast</button></div>';
-    if (S.tab === "trees") {
+      '<div class="seg pr-tabs" role="group" aria-label="Practice type"><button data-tab="coach" aria-pressed="' + (S.tab === "coach") + '">Coach</button><button data-tab="trees" aria-pressed="' + (S.tab === "trees") + '">Decision trees</button><button data-tab="drills" aria-pressed="' + (S.tab === "drills") + '">Deadlines</button><button data-tab="find" aria-pressed="' + (S.tab === "find") + '">Find it fast</button></div>';
+    if (S.tab === "coach") {
+      h += COACHUI.html();
+    } else if (S.tab === "trees") {
       var ws = weakSpots();
       if (ws.length) {
         h += '<div class="pr-weak"><span class="label">Your weak spots</span>' + ws.map(function (w) {
@@ -52,6 +54,7 @@
       h += findHtml();
     }
     root().innerHTML = h;
+    if (S.tab === "coach") COACHUI.after();
     if (S.tab === "find" && S.ff && S.ff.picked == null) S.ff.t0 = Date.now();
   }
 
@@ -266,6 +269,7 @@
   document.addEventListener("click", function (e) {
     var b = e.target.closest && e.target.closest("#practiceArea button"); if (!b) return;
     var d = b.dataset;
+    if (d.co != null) { COACHUI.click(b); return; }
     if (d.tab) { S.tab = d.tab; S.mode = "home"; draw(); }
     else if (d.run) { startRun(d.run); top(); }
     else if (d.weak) { var p = d.weak.split("."); startRun(p[0], p[1]); top(); }
