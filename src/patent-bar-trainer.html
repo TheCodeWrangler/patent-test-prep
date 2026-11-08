@@ -1,0 +1,590 @@
+<title>Patent Bar Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a filing-wrapper — sticky tab strip, one working panel at a time, section symbols as the recurring mark */
+:root{
+  --paper:#eef1f4; --sheet:#ffffff; --ink:#18222e; --muted:#5a6675; --rule:#d3d9e0;
+  --accent:#1f4e79; --stamp:#2f7d4f; --stamp-bg:#e4f1e8; --warn:#a8551b; --warn-bg:#f8ebe0; --miss:#a33a3a; --miss-bg:#f6e3e3;
+  --display:"Spectral",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#11161c; --sheet:#1a212a; --ink:#e3e8ee; --muted:#9aa6b4; --rule:#2c3642;
+  --accent:#7fb0de; --stamp:#6cc48e; --stamp-bg:#16301f; --warn:#e0a06b; --warn-bg:#332317; --miss:#e88a8a; --miss-bg:#381c1c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11161c; --sheet:#1a212a; --ink:#e3e8ee; --muted:#9aa6b4; --rule:#2c3642;
+  --accent:#7fb0de; --stamp:#6cc48e; --stamp-bg:#16301f; --warn:#e0a06b; --warn-bg:#332317; --miss:#e88a8a; --miss-bg:#381c1c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+header h1{font-family:var(--display);font-weight:700;font-size:1.9rem;line-height:1.1;margin:0;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);font-size:.92rem}
+.sec{font-family:var(--mono);color:var(--accent)}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);margin:16px 0 18px;padding-block:8px;border-bottom:1px solid var(--rule);display:flex;gap:4px;overflow-x:auto}
+nav button{flex:0 0 auto;font:500 .88rem var(--body);background:none;border:0;color:var(--muted);padding:8px 12px;border-radius:6px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--sheet);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h2{font-family:var(--display);font-size:1.35rem;margin:0 0 4px}
+.lede{color:var(--muted);margin:0 0 16px;font-size:.92rem;max-width:62ch}
+.label{font:600 .72rem var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.btn{font:600 .9rem var(--body);border-radius:8px;padding:10px 16px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--sheet)}
+.btn.good{background:var(--stamp-bg);border-color:var(--stamp);color:var(--stamp)}
+.btn.bad{background:var(--miss-bg);border-color:var(--miss);color:var(--miss)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 .75rem var(--body);padding:2px 8px;border-radius:999px;background:var(--paper);color:var(--muted);border:1px solid var(--rule)}
+.chip.good{background:var(--stamp-bg);color:var(--stamp);border-color:transparent}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.chip.bad{background:var(--miss-bg);color:var(--miss);border-color:transparent}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* cards */
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:14px}
+.stats div{min-width:0}.stats b{display:block;font:600 1.3rem var(--mono)}
+.boxes{display:flex;gap:4px;margin-bottom:16px}
+.boxes span{flex:1;height:8px;border-radius:2px;background:var(--rule);position:relative}
+.boxes span i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:2px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:22px 20px;min-height:220px;display:flex;flex-direction:column;gap:14px}
+.card .q{font-family:var(--display);font-size:1.25rem;line-height:1.35;font-weight:500}
+.card .a{border-top:1px dashed var(--rule);padding-top:14px}
+.card .a strong{display:block;font-size:1.05rem;margin-bottom:4px}
+.card .cite{font:.82rem var(--mono);color:var(--accent)}
+.card .meta{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.done{text-align:center;padding:40px 16px;color:var(--muted)}
+.done .stamp{display:inline-block;font:700 1.1rem var(--mono);letter-spacing:.15em;color:var(--stamp);border:2px solid var(--stamp);padding:6px 14px;transform:rotate(-4deg);margin-bottom:12px}
+
+/* mpep */
+.ch{display:grid;grid-template-columns:64px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.ch .num{font:500 1.05rem var(--mono);color:var(--accent)}
+.ch .t{font-weight:600}.ch .d{color:var(--muted);font-size:.88rem;margin-top:2px}
+.ch .kw{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+.ch .kw code{font:.76rem var(--mono);background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:1px 6px}
+.ch.heavy .num::after{content:" ●";color:var(--warn);font-size:.7rem}
+.filter{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+
+/* forms */
+form.log{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:16px;display:grid;gap:10px;margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:grid;gap:4px;font-size:.82rem;color:var(--muted);min-width:0}
+input,select,textarea{font:inherit;font-size:.95rem;color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:8px 10px;width:100%}
+textarea{min-height:64px;resize:vertical}
+.entry{padding:12px 0;border-bottom:1px solid var(--rule);display:grid;gap:4px}
+.entry .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.entry .topic{font-weight:600;min-width:0}
+.entry .x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 4px}
+.entry p{margin:0;font-size:.9rem}
+.tally{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+
+/* mock */
+.clock{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:20px;display:grid;gap:16px}
+.big{font:500 3rem var(--mono);line-height:1;letter-spacing:-.02em}
+.bar{height:10px;background:var(--paper);border-radius:5px;position:relative;overflow:hidden;border:1px solid var(--rule)}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.bar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn)}
+.counter{display:flex;align-items:center;gap:14px}
+.counter .n{font:600 2rem var(--mono);min-width:3ch;text-align:center}
+.counter .btn{width:48px;height:48px;padding:0;font-size:1.4rem}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.seg button{font:500 .85rem var(--body);background:var(--sheet);color:var(--muted);border:0;padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--sheet)}
+.scores{margin-top:18px}
+.scores table{width:100%;border-collapse:collapse;font-size:.9rem}
+.scores td,.scores th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--rule)}
+.scores th{font:600 .72rem var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* plan */
+.week{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--rule);align-items:start}
+.week input{width:20px;height:20px;margin-top:2px;accent-color:var(--stamp)}
+.week .w{font:500 .78rem var(--mono);color:var(--accent)}
+.week .t{font-weight:600}.week .d{color:var(--muted);font-size:.88rem}
+.week.checked .t{text-decoration:line-through;color:var(--muted)}
+/* learn */
+.listen{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:0 0 18px}
+.lesson .listen{margin:0 0 16px}
+.listen .lt{font-weight:600}.listen .ld{color:var(--muted);font-size:.84rem}
+.listen a.btn{text-decoration:none;flex:0 0 auto}
+.prog{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.prog .bar{margin-top:6px}
+.mods{display:grid;gap:0}
+.mod{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--rule);background:none;border-left:0;border-right:0;border-top:0;text-align:left;color:inherit;font:inherit;cursor:pointer;width:100%}
+.mod:hover{background:var(--sheet)}
+.mod .n{font:500 1.1rem var(--mono);color:var(--accent)}
+.mod .t{font-weight:600}.mod .d{color:var(--muted);font-size:.86rem}
+.lesson{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:22px 20px}
+.lesson h3{font-family:var(--display);font-size:1.5rem;margin:4px 0 12px;line-height:1.2;text-wrap:balance}
+.lesson h4{font:600 .72rem var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:24px 0 8px}
+.lesson p,.lesson li{max-width:65ch}
+.lesson ol,.lesson ul{padding-left:1.2em;margin:0}
+.lesson li{margin-bottom:6px}
+.lesson .aside{background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;font-size:.92rem;margin:14px 0}
+.terms{display:grid;gap:8px;margin:0}
+.terms div{display:grid;grid-template-columns:minmax(0,9rem) 1fr;gap:12px}
+.terms dt{font-weight:600}.terms dd{margin:0;color:var(--muted);font-size:.92rem}
+details.chk{border-top:1px solid var(--rule);padding:10px 0}
+details.chk summary{cursor:pointer;font-weight:500}
+details.chk p{margin:8px 0 0;color:var(--muted)}
+.deep label{display:flex;gap:10px;align-items:flex-start;color:var(--ink);font-size:.92rem;padding:6px 0}
+.deep input{width:18px;height:18px;margin-top:2px;accent-color:var(--stamp);flex:0 0 auto}
+.lnav{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
+@media (max-width:480px){.terms div{grid-template-columns:1fr;gap:2px}.prog{grid-template-columns:1fr}}
+.note{font-size:.8rem;color:var(--muted);margin-top:24px;border-top:1px solid var(--rule);padding-top:12px}
+@media (max-width:480px){.grid2{grid-template-columns:1fr}.big{font-size:2.4rem}.ch{grid-template-columns:52px 1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Patent Bar Trainer</h1>
+  <p>USPTO registration exam · 100 questions · 6 hours · 70% to pass · open-MPEP</p>
+</header>
+
+<nav role="tablist">
+  <button role="tab" data-v="learn">Learn</button>
+  <button role="tab" data-v="cards">Flashcards</button>
+  <button role="tab" data-v="mpep">MPEP map</button>
+  <button role="tab" data-v="misses">Miss log</button>
+  <button role="tab" data-v="mock">Mock timer</button>
+  <button role="tab" data-v="plan">12-week plan</button>
+</nav>
+
+<section id="v-learn" hidden>
+  <div id="learnArea"></div>
+</section>
+
+<section id="v-cards" hidden>
+  <h2>Deadlines &amp; rules</h2>
+  <div class="row" style="margin-bottom:10px"><label class="row" style="display:flex;color:var(--ink);font-size:.88rem"><input type="checkbox" id="allCards" style="width:18px;height:18px"> Drill every card, including topics I haven't learned yet</label></div>
+  <p class="lede">Spaced repetition across five boxes. A card you get right moves up a box and comes back later; a miss drops it to box 1 and it comes back within the day.</p>
+  <div class="stats tnum">
+    <div><span class="label">Due now</span><b id="sDue">0</b></div>
+    <div><span class="label">Mastered</span><b id="sMast">0</b></div>
+    <div><span class="label">Reviews today</span><b id="sToday">0</b></div>
+  </div>
+  <div class="boxes" id="boxes"></div>
+  <div id="cardArea"></div>
+</section>
+
+<section id="v-mpep" hidden>
+  <h2>Where things live</h2>
+  <p class="lede">The exam is open-book, so speed comes from knowing which chapter to search. <span style="color:var(--warn)">●</span> marks the chapters that carry the most questions.</p>
+  <div class="filter"><input id="mpepQ" type="search" placeholder="Search topics, e.g. reissue, PCT, IDS" aria-label="Search MPEP chapters"></div>
+  <div id="mpepList"></div>
+</section>
+
+<section id="v-misses" hidden>
+  <h2>Miss log</h2>
+  <p class="lede">Every practice question you miss: find the MPEP section that answers it and write down the search term that got you there. This becomes your personal index.</p>
+  <form class="log" id="logForm">
+    <label>What the question was about<input id="lTopic" required placeholder="Extension of time after final rejection"></label>
+    <div class="grid2">
+      <label>MPEP §<input id="lSec" placeholder="706.07(f)" class="tnum"></label>
+      <label>Search term that found it<input id="lTerm" placeholder="advisory action"></label>
+    </div>
+    <label>The rule, in your words<textarea id="lRule" placeholder="Reply within 2 months of final to get the advisory action before the 3-month date…"></textarea></label>
+    <div class="row"><button class="btn primary" type="submit">Add to log</button><span id="logMsg" class="label"></span></div>
+  </form>
+  <div class="tally" id="tally"></div>
+  <div id="logList"></div>
+</section>
+
+<section id="v-mock" hidden>
+  <h2>Mock exam pacer</h2>
+  <p class="lede">The real exam is two 3-hour sessions of 50 questions. Tap + after each question; the orange tick shows where you should be.</p>
+  <div class="clock">
+    <div class="row" style="justify-content:space-between">
+      <div class="seg" role="group" aria-label="Session length">
+        <button id="m50" aria-pressed="true">Half · 50 Q / 3 h</button>
+        <button id="m100" aria-pressed="false">Full · 100 Q / 6 h</button>
+      </div>
+      <span id="paceChip" class="chip">Not started</span>
+    </div>
+    <div>
+      <span class="label">Time left</span>
+      <div class="big tnum" id="mLeft">3:00:00</div>
+    </div>
+    <div>
+      <div class="bar"><i id="mBar"></i><b id="mTarget" style="left:0"></b></div>
+      <div class="row tnum" style="justify-content:space-between;margin-top:6px;font-size:.82rem;color:var(--muted)">
+        <span id="mPace">Target pace 3:36 per question</span><span id="mAvg">Your pace —</span>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <div class="counter">
+        <button class="btn" id="mMinus" aria-label="One fewer question">−</button>
+        <div><span class="label">Answered</span><div class="n tnum" id="mN">0</div></div>
+        <button class="btn primary" id="mPlus" aria-label="One more question answered">+</button>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="mStart">Start</button>
+        <button class="btn" id="mReset">Reset</button>
+      </div>
+    </div>
+  </div>
+  <div class="scores">
+    <h2 style="font-size:1.1rem">Mock scores</h2>
+    <form class="row" id="scoreForm" style="margin:8px 0 4px">
+      <input id="scQ" type="number" min="1" max="100" placeholder="Correct" style="width:110px" aria-label="Questions correct">
+      <span class="label">out of</span>
+      <input id="scT" type="number" min="1" max="100" value="100" style="width:90px" aria-label="Questions total">
+      <button class="btn" type="submit">Log score</button>
+    </form>
+    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Score</th><th>Status</th><th></th></tr></thead><tbody id="scoreRows"></tbody></table></div>
+  </div>
+</section>
+
+<section id="v-plan" hidden>
+  <h2>12 weeks to exam day</h2>
+  <p class="lede">Self-study track: free MPEP plus a question bank. Check off a block when it's done.</p>
+  <div id="planList"></div>
+</section>
+
+<p class="note">Facts on the cards reflect the AIA-era MPEP as of late 2026. Fees and rules change; confirm against the edition the USPTO lists as tested before exam day. Progress is saved in this browser only.</p>
+</div>
+
+<script>
+const store={get(k,d){try{const v=localStorage.getItem("pbt_"+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem("pbt_"+k,JSON.stringify(v))}catch(e){}}};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const DAY=864e5;
+
+/* ---------- Learn ---------- */
+const LESSONS=[
+{n:1,t:"What you're actually learning",d:"What a patent is, what an agent does, and what the exam tests.",
+body:`<p>A patent gives its owner the right to <b>exclude</b> others from making, using, selling, offering to sell, or importing the claimed invention for a limited term. The public gets a full written disclosure of the invention in exchange.</p>
+<p>There are three kinds of patents. <b>Utility</b> patents cover processes, machines, manufactures and compositions of matter, and they're almost everything you'll see. <b>Design</b> patents cover the ornamental appearance of an article. <b>Plant</b> patents cover new asexually reproduced plants.</p>
+<p>Every patent has two halves. The <b>specification</b> describes the invention. The <b>claims</b> are numbered sentences at the end that define exactly what is protected. Think of the claims as the interface contract and the specification as the documentation that has to support it. Most of what an agent does is negotiating claim language with an examiner.</p>
+<div class="aside">The exam tests how the USPTO handles applications (deadlines, filings, examination, appeals, post-grant procedures), the law of patentability as examiners apply it, and the ethics rules for practitioners. It does not test litigation or infringement.</div>
+<p>One date matters everywhere: <b>March 16, 2013</b>. The America Invents Act (AIA) switched the U.S. to a first-inventor-to-file system for applications with claims effectively filed on or after that date. Most exam questions use AIA law, but some still ask about older, pre-AIA applications, so always check which regime a question sits in.</p>`,
+terms:[["Claim","A single sentence defining the protected invention. Independent claims stand alone; dependent claims add limits to another claim."],["Specification","The written description of the invention that supports the claims."],["Examiner","The USPTO employee who searches prior art and decides whether claims are patentable."],["Practitioner","A registered patent agent or patent attorney allowed to represent applicants before the USPTO."],["AIA","America Invents Act. First-inventor-to-file for applications effectively filed on or after March 16, 2013."]],
+check:[["Which part of a patent defines what is protected?","The claims. The specification has to support them, but the claims set the boundary."],["A question describes an application filed in 2010. What should you check first?","Whether pre-AIA law applies. Filings before March 16, 2013 are generally under the old first-to-invent rules."],["Can a patent agent advise a client on whether a competitor infringes?","No. Infringement opinions are legal work outside practice before the USPTO."]],
+deep:[["MPEP 2150–2159","AIA first-inventor-to-file overview"],["MPEP 1500 (skim)","How design patents differ from utility"],["35 U.S.C. 101, 154(a)","Read the actual statute text in Appendix L"]]},
+
+{n:2,t:"The sources of law",d:"The statute, the rules, the MPEP, and how to find anything in them.",
+body:`<p>Patent law sits in three layers, and the exam expects you to know which layer answers a question.</p>
+<ol><li><b>35 U.S.C., the statute.</b> Congress wrote it, and it's the highest authority. The sections you'll use constantly are 101, 102, 103 and 112 for patentability, 119 and 120 for priority, 122 for publication, 154 for term, and 251 for reissue.</li>
+<li><b>37 C.F.R., the rules.</b> The USPTO wrote these to implement the statute. Part 1 is patent procedure (rules are cited as "1.136" and so on). Part 11 is practitioner ethics. Part 41 covers PTAB appeals, and Part 42 covers PTAB trials such as IPR.</li>
+<li><b>The MPEP.</b> This is the examiners' manual. It explains the statute, rules and case law in plain-ish language. It isn't binding law, but the exam questions are written from it.</li></ol>
+<p>The MPEP is numbered in hundreds. Chapter 700 holds sections 701 through 799, and subsections branch from there, like <span class="sec">706.07(f)</span>. Appendix L reprints the statute and Appendix R reprints the rules, so the full text of both is inside the document you'll search on exam day.</p>
+<div class="aside">Your study method follows from this structure. Learn the concept first, then learn which chapter it lives in, then learn the search term that finds it fast.</div>`,
+terms:[["35 U.S.C.","Title 35 of the U.S. Code: the patent statute."],["37 C.F.R.","Title 37 of the Code of Federal Regulations: USPTO rules."],["MPEP","Manual of Patent Examining Procedure, the examiners' guide."],["PTAB","Patent Trial and Appeal Board. Hears appeals from examiners and runs IPR and PGR trials."],["OED","Office of Enrollment and Discipline. Admits and disciplines practitioners."]],
+check:[["If the MPEP and a rule in 37 C.F.R. seem to disagree, which controls?","The rule, and above it the statute. The MPEP is guidance."],["Where are the ethics rules for practitioners?","37 C.F.R. Part 11."],["Where in the MPEP can you read 35 U.S.C. 112 word for word?","Appendix L."]],
+deep:[["MPEP table of contents","Read every chapter title once, start to finish"],["MPEP Appendix L","Skim the section headings of 35 U.S.C."],["MPEP Appendix R","Skim the section headings of 37 C.F.R. Part 1"]]},
+
+{n:3,t:"The life of an application",d:"The backbone: filing to grant, step by step.",
+body:`<p>Nearly every exam question sits somewhere on this timeline. Learn it as a sequence and the details will have a place to land.</p>
+<ol><li><b>Provisional application (optional).</b> A cheap placeholder that holds a filing date for 12 months. It needs no claims and is never examined.</li>
+<li><b>Non-provisional application.</b> The real application, with a specification, claims, drawings, an inventor oath or declaration, an application data sheet, and fees. A filing date only requires the specification and any needed drawings; missing items can follow.</li>
+<li><b>Publication.</b> The application publishes about 18 months after its earliest claimed filing date, unless the applicant asked for non-publication at filing and won't file abroad.</li>
+<li><b>Examination.</b> The examiner searches prior art and sends an <b>Office action</b>. The first action is often a restriction requirement asking you to pick one invention.</li>
+<li><b>Reply.</b> You amend claims or argue, usually within 3 months, extendable by fee up to 6.</li>
+<li><b>Final rejection.</b> After a round or two the examiner may make the rejection final. Your options narrow to limited amendments, a request for continued examination (RCE), an appeal, or a continuation application.</li>
+<li><b>Allowance.</b> A Notice of Allowance arrives, and you pay the issue fee within 3 months. That deadline can't be extended.</li>
+<li><b>Grant and after.</b> The patent issues. Maintenance fees come due at 3.5, 7.5 and 11.5 years. Errors can be fixed and validity challenged after grant.</li></ol>
+<div class="aside">Missing a reply deadline makes the application <b>abandoned</b>. A petition can revive it if the delay was unintentional.</div>`,
+terms:[["Office action","A letter from the examiner rejecting or objecting to the application."],["Restriction","A requirement to choose one of several inventions claimed in one application."],["RCE","Request for continued examination. Reopens prosecution after a final rejection."],["Notice of Allowance","The examiner's decision that the claims are patentable."],["Abandonment","The application dies, usually for failing to reply on time."]],
+check:[["What does a provisional application need that a non-provisional doesn't?","Nothing extra. It needs less: no claims and no oath. It just holds a date for 12 months."],["You get a Notice of Allowance. Can you buy a 2-month extension for the issue fee?","No. The 3-month issue fee period is statutory and can't be extended."],["After a final rejection, name three ways forward.","File an RCE, appeal to the PTAB, or file a continuation (limited after-final amendments are a fourth)."]],
+deep:[["MPEP 201","Types of applications"],["MPEP 601–602","Contents of an application, oath and declaration"],["MPEP 1120","Pre-grant publication"],["MPEP 1303–1306","Allowance and the issue fee"]]},
+
+{n:4,t:"Patentability: 101, 102, 103, 112",d:"The four tests every claim has to pass.",
+body:`<p>A claim has to clear four statutory hurdles. Examiners reject under each section by number, so you'll read these numbers constantly.</p>
+<p><b>§101, eligibility.</b> Is it the kind of thing patents cover? The four categories are process, machine, manufacture and composition of matter. Judges have carved out exceptions for laws of nature, natural phenomena and abstract ideas. For software and ML claims this is the big one, and the USPTO applies a two-step test from the Supreme Court's <i>Alice</i> and <i>Mayo</i> decisions.</p>
+<p><b>§102, novelty.</b> Is it new? A claim is <b>anticipated</b> when a single prior art reference shows every element arranged as claimed. Under the AIA, prior art includes anything publicly available before your effective filing date, plus earlier-filed U.S. applications by others. There's a 1-year grace period for the inventor's own disclosures.</p>
+<p><b>§103, obviousness.</b> Even if no single reference has everything, would combining references have been obvious to a person of ordinary skill in the field? The analysis follows the <i>Graham</i> factors, and the <i>KSR</i> decision lists accepted reasons for combining references.</p>
+<p><b>§112, disclosure and clarity.</b> The specification must describe and enable the invention (112(a)), and claims must be definite (112(b)). It also covers dependent claims (112(d)) and means-plus-function claims (112(f)).</p>
+<div class="aside">The shorthand to remember: one reference with everything is 102. Two or more references combined is 103.</div>`,
+terms:[["Prior art","Earlier disclosures used to judge novelty and obviousness."],["Anticipation","A §102 rejection: one reference discloses every element."],["PHOSITA","Person having ordinary skill in the art, the hypothetical expert for §103."],["Effective filing date","The date a claim gets credit for, including valid priority claims."],["Enablement","The spec teaches a skilled person to make and use the invention without undue experimentation."]],
+check:[["An examiner combines a 2019 paper with a 2021 patent to reject your claim. Which section?","§103, obviousness. Combining references is always 103."],["You published your own paper 10 months before filing. Is it prior art against you under the AIA?","Generally no. The 1-year grace period in 102(b)(1) excepts the inventor's own disclosure."],["A claim says 'a substantially large buffer'. What problem might it raise?","Indefiniteness under §112(b), if the spec gives no standard for 'substantially large'."]],
+deep:[["MPEP 2106","Subject-matter eligibility, especially 2106.04"],["MPEP 2152–2154","AIA prior art and its exceptions"],["MPEP 2131","Anticipation"],["MPEP 2141–2143","Obviousness, Graham and KSR rationales"],["MPEP 2161–2174","Written description, enablement, definiteness"],["MPEP 2181","Means-plus-function"]]},
+
+{n:5,t:"Families, priority and PCT",d:"How applications build on each other, at home and abroad.",
+body:`<p>Applications rarely live alone. A later application can claim the filing date of an earlier one, which can be worth everything when prior art turns up in between.</p>
+<p><b>Domestic benefit.</b> A non-provisional can claim a provisional filed within the previous 12 months (§119(e)). A <b>continuation</b> repeats the parent's disclosure with new claims. A <b>divisional</b> carries claims the examiner split off in a restriction. A <b>continuation-in-part</b> adds new matter; only the old material gets the parent's date. Any child must be filed while the parent is still pending.</p>
+<p><b>Foreign priority.</b> Under the Paris Convention, a U.S. application can claim a foreign filing made within the previous 12 months (6 months for designs) under §119(a).</p>
+<p><b>The PCT.</b> The Patent Cooperation Treaty lets you file one international application that preserves your rights in more than 150 countries. It gets an international search report and written opinion, publishes at 18 months, and can go through optional further examination under Chapter II. It never grants a patent itself. At 30 months from priority you enter the <b>national stage</b> in each country you want.</p>
+<div class="aside">New matter can never be added by amendment to a pending application (§132). If you need to add material, file a CIP or a new application.</div>`,
+terms:[["Benefit claim","A claim to an earlier U.S. application's filing date (§119(e), §120)."],["Priority claim","A claim to an earlier foreign application's date (§119(a))."],["Copendency","The child is filed before the parent is patented or abandoned."],["CIP","Continuation-in-part: adds new matter to a parent's disclosure."],["National stage","Entry of a PCT application into a specific country, at 30 months in the U.S."]],
+check:[["Why file a continuation if the parent is about to be allowed?","To keep a pending application alive and pursue different or broader claims later."],["Your CIP adds a new embodiment. What filing date does a claim to that embodiment get?","The CIP's own filing date, not the parent's."],["Does a PCT application become a patent?","No. It's a vehicle. Patents are granted country by country after national stage entry."]],
+deep:[["MPEP 211","Domestic benefit claims"],["MPEP 213–216","Foreign priority"],["MPEP 1801–1812","PCT overview and filing"],["MPEP 1893","National stage in the U.S."],["MPEP 140","Foreign filing licenses"]]},
+
+{n:6,t:"Prosecution: actions, replies and time",d:"The working mechanics of arguing with an examiner.",
+body:`<p>This is the day-to-day work of an agent, and the exam is heavy on its deadlines.</p>
+<p><b>Periods.</b> An Office action sets a <b>shortened statutory period</b>, usually 3 months. The statute allows at most 6 months (§133). Under rule 1.136(a) you can buy extensions one month at a time, up to that 6-month limit, without asking permission. A deadline that falls on a weekend or federal holiday moves to the next business day.</p>
+<p><b>Replies.</b> A reply must address every ground of rejection and objection (rule 1.111). A partial reply can be treated as no reply.</p>
+<p><b>After final.</b> Amendments after a final rejection are limited (rule 1.116). If you reply within 2 months, the examiner's advisory action usually comes back before the 3-month date, which can save extension fees. To keep going you file an RCE (rule 1.114), a notice of appeal (rule 41.31), or a continuation.</p>
+<p><b>Appeals.</b> You can appeal once any claim has been rejected twice. The appeal brief is due 2 months after the notice of appeal, the examiner answers, and you may file a reply brief within 2 months of the answer.</p>
+<p><b>Mailing rules.</b> A reply mailed or transmitted with a certificate under rule 1.8 counts as filed on the certificate date, but this doesn't work for new applications. Priority Mail Express under rule 1.10 gets the deposit date, including for new applications.</p>
+<div class="aside">Questions here often hinge on arithmetic: mailing date, shortened period, extension months, weekend rule. Practice counting deadlines by hand.</div>`,
+terms:[["SSP","Shortened statutory period: the reply time set in an Office action."],["Final rejection","Closes prosecution; limits further amendments."],["Advisory action","The examiner's response to an after-final reply."],["Ex parte Quayle","An action saying only formal matters remain before allowance."],["Terminal disclaimer","Ties a patent's term to another to overcome double patenting."]],
+check:[["An action mailed January 10 sets a 3-month period. What's the latest reply date with maximum extensions?","July 10, six months out, assuming it's a business day and you pay for three months of extensions."],["Can you use a rule 1.8 certificate of mailing to file a new application?","No. Rule 1.8 excludes new applications. Use Priority Mail Express under rule 1.10 or electronic filing."],["Why reply within 2 months of a final rejection?","To get the advisory action before the 3-month date, so you can decide next steps without paying for extensions."]],
+deep:[["MPEP 706–707","Rejections and the form of Office actions"],["MPEP 710–711","Time periods, extensions and abandonment"],["MPEP 714","Amendments and after-final practice"],["MPEP 802–818","Restriction and election"],["MPEP 804","Double patenting"],["MPEP 1204–1208","Appeal procedure"],["MPEP 512–513","Certificates of mailing and Priority Mail Express"]]},
+
+{n:7,t:"After the patent issues",d:"Fees, corrections, and the ways a patent gets challenged.",
+body:`<p>Grant isn't the end. A patent has to be kept alive, can be corrected, and can be attacked.</p>
+<p><b>Term and fees.</b> A utility patent lasts 20 years from its earliest non-provisional U.S. filing date. The USPTO adds patent term adjustment (PTA) for its own delays, and regulated products like drugs can get a term extension (PTE). Maintenance fees are due at 3.5, 7.5 and 11.5 years, with a 6-month grace period that costs a surcharge. Design patents last 15 years from grant and have no maintenance fees.</p>
+<p><b>Fixing mistakes.</b> A <b>certificate of correction</b> fixes small errors, whether the Office's or the applicant's. A <b>reissue</b> fixes bigger errors that make the patent wholly or partly inoperative or invalid. A reissue can broaden claims only if filed within 2 years of grant.</p>
+<p><b>Challenges at the USPTO.</b> Anyone can request <b>ex parte reexamination</b> based on patents and printed publications that raise a substantial new question of patentability. At the PTAB, <b>post-grant review</b> (PGR) is available in the first 9 months on almost any invalidity ground. After that window, <b>inter partes review</b> (IPR) is limited to 102 and 103 arguments using patents and printed publications. A patent owner can also ask for <b>supplemental examination</b> to have new information considered.</p>`,
+terms:[["PTA","Patent term adjustment for USPTO delays (§154(b))."],["Reissue","A new patent replacing a defective one (§251)."],["Reexamination","Re-review of claims based on patents and printed publications."],["IPR","Inter partes review: a PTAB trial on 102/103 grounds."],["PGR","Post-grant review: PTAB trial within 9 months of grant, broad grounds."]],
+check:[["A patent granted 3 years ago has a claim that's too narrow. Can a reissue broaden it?","No. Broadening reissues must be filed within 2 years of grant."],["A challenger wants to argue lack of enablement at the PTAB, 2 years after grant. IPR or PGR?","Neither works. The PGR window has closed, and IPR allows only 102 and 103 arguments."],["Does a design patent need maintenance fees?","No."]],
+deep:[["MPEP 2501–2506","Maintenance fees"],["MPEP 2701–2734","Term, PTA and PTE"],["MPEP 1401–1412","Reissue"],["MPEP 1480–1485","Certificates of correction"],["MPEP 2209–2216","Ex parte reexamination"],["MPEP 2801–2810","Supplemental examination"]]},
+
+{n:8,t:"Practitioner ethics",d:"The professional conduct rules you're licensed under.",
+body:`<p>Once registered, you're bound by the USPTO Rules of Professional Conduct in 37 C.F.R. Part 11. They're modeled on the ABA Model Rules that lawyers follow, so if you've heard of attorney ethics, much of it will feel familiar.</p>
+<ul><li><b>Competence and diligence.</b> Take only work you can handle, and keep clients' deadlines.</li>
+<li><b>Communication.</b> Keep clients informed and forward Office correspondence promptly.</li>
+<li><b>Confidentiality.</b> Protect client information, with narrow exceptions.</li>
+<li><b>Conflicts of interest.</b> Don't represent clients whose interests are directly adverse without informed, written consent.</li>
+<li><b>Client money.</b> Keep client funds in a separate trust account, never mixed with your own.</li>
+<li><b>Candor to the Office.</b> Everyone involved in prosecution owes a duty of disclosure of known material information (rule 1.56). Signing a paper certifies a reasonable inquiry was made (rule 11.18).</li>
+<li><b>Scope of practice.</b> An agent may prepare and prosecute applications and give patentability opinions tied to that work, but may not practice general law.</li></ul>
+<p>The Office of Enrollment and Discipline (OED) investigates misconduct and can reprimand, suspend or exclude practitioners.</p>`,
+terms:[["Part 11","USPTO Rules of Professional Conduct (37 C.F.R. 11.101–11.901)."],["Rule 1.56","Duty of candor and good faith in dealing with the Office."],["Rule 11.18","What a signature on a paper certifies."],["Inequitable conduct","Withholding material information with intent to deceive; can make a patent unenforceable."],["Exclusion","OED's most serious sanction: removal from the register."]],
+check:[["A client pays you an advance for future work. Where does it go?","Into a client trust account, separate from your own funds, until earned."],["You find a highly relevant reference after filing. What do you do?","Disclose it to the Office, typically in an IDS, under the duty of disclosure in rule 1.56."],["Can an agent draft a licensing agreement for a client?","No. Contract work is legal practice outside the USPTO."]],
+deep:[["37 C.F.R. 11.101–11.118","Client-practitioner relationship rules"],["37 C.F.R. 11.301–11.306","Candor and fairness"],["MPEP 2001–2004","Duty of disclosure"],["MPEP 609","Information disclosure statements"]]},
+];
+const NLM="https://notebooklm.link.google/r8sYAwuapHBy";
+const EPS={0:{name:"Overview of All 8",len:"66 min"},1:{name:"Chapter 1 Overview",len:"24 min"}};
+for(let i=2;i<=8;i++)EPS[i]={name:"Lesson "+i+" episode",len:"Ready"};
+function listenCard(n){const e=EPS[n],lbl=n===0?"Full-course podcast":"Lesson podcast";
+  return`<div class="listen"><div style="min-width:0"><span class="label">${lbl}</span><div class="lt">${e?esc(e.name):"Generating in NotebookLM"}</div><div class="ld">${e?`${e.len} · opens in NotebookLM, then pick this episode in Studio`:"Not ready yet. Check back later today."}</div></div>${e?`<a class="btn primary" href="${NLM}" target="_blank" rel="noopener">▶ Listen</a>`:`<span class="chip">Queued</span>`}</div>`}
+let lp=store.get("learn",{read:{},deep:{}}),openMod=null;
+function deepDone(n){const L=LESSONS[n-1];return L.deep.every((_,j)=>lp.deep[n+"-"+j])}
+function learned(n){return !!lp.read[n]}
+function renderLearn(){
+  const nRead=LESSONS.filter(l=>learned(l.n)).length,nDeep=LESSONS.filter(l=>deepDone(l.n)).length;
+  if(openMod===null){
+    $("#learnArea").innerHTML=`<h2>Learn it first</h2>
+    <p class="lede">Two passes. The <b>breadth pass</b> gives you the whole map in eight short lessons; read them in order, one or two a day. The <b>depth pass</b> sends you into the MPEP sections behind each lesson. Practice questions start making sense once a topic has both.</p>
+    ${listenCard(0)}
+    <div class="prog tnum">
+      <div><span class="label">Breadth pass · ${nRead}/8 read</span><div class="bar"><i style="width:${nRead/8*100}%"></i></div></div>
+      <div><span class="label">Depth pass · ${nDeep}/8 done</span><div class="bar"><i style="width:${nDeep/8*100}%;background:var(--stamp)"></i></div></div>
+    </div>
+    <div class="mods">${LESSONS.map(l=>{const dd=deepDone(l.n),r=learned(l.n);
+      return`<button class="mod" data-open="${l.n}"><span class="n">${l.n}</span><span style="min-width:0"><span class="t" style="display:block">${esc(l.t)}</span><span class="d">${esc(l.d)}</span></span><span class="chip ${dd?"good":r?"warn":""}">${dd?"Deep":r?"Read":"New"}</span></button>`}).join("")}</div>`;
+    document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{openMod=+b.dataset.open;renderLearn();window.scrollTo(0,0)});return}
+  const L=LESSONS[openMod-1];
+  $("#learnArea").innerHTML=`<div class="row" style="margin-bottom:12px"><button class="btn" id="lBack">← All lessons</button></div>
+  <article class="lesson">
+    <span class="label">Lesson ${L.n} of 8</span>
+    <h3>${esc(L.t)}</h3>
+    ${listenCard(L.n)}
+    ${L.body}
+    <h4>Key terms</h4>
+    <dl class="terms">${L.terms.map(([a,b])=>`<div><dt>${esc(a)}</dt><dd>${esc(b)}</dd></div>`).join("")}</dl>
+    <h4>Check your understanding</h4>
+    <p style="color:var(--muted);font-size:.88rem;margin:0 0 4px">Not scored. Answer in your head, then open it.</p>
+    ${L.check.map(([q,a])=>`<details class="chk"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}
+    <div class="row" style="margin-top:16px"><button class="btn ${learned(L.n)?"good":"primary"}" id="lRead">${learned(L.n)?"✓ Breadth pass read":"Mark as read"}</button></div>
+    <h4>Go deeper (depth pass)</h4>
+    <p style="color:var(--muted);font-size:.88rem;margin:0 0 4px">Read these in the MPEP after you've finished all eight lessons. Check each one off as you go.</p>
+    <div class="deep">${L.deep.map(([s,d],j)=>`<label><input type="checkbox" id="dp${L.n}-${j}" data-dp="${L.n}-${j}" ${lp.deep[L.n+"-"+j]?"checked":""}><span><span class="sec">${esc(s)}</span> · ${esc(d)}</span></label>`).join("")}</div>
+    <div class="lnav">${L.n>1?`<button class="btn" data-go="${L.n-1}">← Lesson ${L.n-1}</button>`:"<span></span>"}${L.n<8?`<button class="btn primary" data-go="${L.n+1}">Lesson ${L.n+1} →</button>`:`<button class="btn" id="lDone">Back to all lessons</button>`}</div>
+  </article>`;
+  $("#lBack").onclick=()=>{openMod=null;renderLearn()};
+  $("#lRead").onclick=()=>{lp.read[L.n]=!lp.read[L.n];store.set("learn",lp);renderLearn()};
+  document.querySelectorAll("[data-dp]").forEach(c=>c.onchange=()=>{lp.deep[c.dataset.dp]=c.checked;store.set("learn",lp)});
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{openMod=+b.dataset.go;renderLearn();window.scrollTo(0,0)});
+  const d=$("#lDone");if(d)d.onclick=()=>{openMod=null;renderLearn()};
+}
+
+/* ---------- Cards ---------- */
+const TAG=[7,7,5,5,5,5,4,6,3,7,7,5,5,6,6,6,6,6,6,5,7,3,6,7,7,7,7,4,4,4,3,3,6,6,4,8,7,3,3,5];
+let allCards=store.get("allCards",false);
+const CARDS=[
+["Utility patent term","20 years from the earliest effective U.S. non-provisional filing date (subject to PTA/PTE).","35 USC 154(a)(2) · MPEP 2701"],
+["Design patent term (filed on/after May 13, 2015)","15 years from the date of grant.","35 USC 173 · MPEP 1505"],
+["How long is a provisional application pending?","12 months from its filing date. It is never examined and needs no claims.","35 USC 111(b) · MPEP 201.04"],
+["Deadline to claim benefit of a provisional in a non-provisional","Within the later of 4 months from the non-provisional's filing or 16 months from the provisional's filing.","37 CFR 1.78 · MPEP 211"],
+["Deadline to claim foreign priority (Paris Convention) for a utility application","File the U.S. application within 12 months of the foreign filing (6 months for designs).","35 USC 119(a) · MPEP 213"],
+["When must the foreign priority claim itself be presented?","Later of 4 months from U.S. filing or 16 months from the foreign filing (in an ADS).","37 CFR 1.55 · MPEP 214"],
+["AIA grace period for the inventor's own disclosure","1 year before the effective filing date.","35 USC 102(b)(1)(A) · MPEP 2153"],
+["Standard shortened statutory period to reply to a non-final Office action","3 months, extendable by fee up to the 6-month statutory maximum.","37 CFR 1.134, 1.136(a) · MPEP 710"],
+["Can the issue fee deadline be extended?","No. 3 months from the Notice of Allowance, statutory and not extendable.","35 USC 151 · MPEP 1306"],
+["Maintenance fee due dates (utility)","3.5, 7.5 and 11.5 years after grant, with a 6-month grace period with surcharge.","35 USC 41(b) · MPEP 2506"],
+["Do design or plant patents have maintenance fees?","No. Only utility patents.","MPEP 2504"],
+["PCT national stage entry deadline in the U.S.","30 months from the priority date.","35 USC 371 · 37 CFR 1.495 · MPEP 1893"],
+["PCT Chapter II demand deadline","Later of 22 months from priority or 3 months from transmittal of the ISR and written opinion.","PCT Rule 54bis · MPEP 1872"],
+["When can you file a notice of appeal to the PTAB?","Once any claim has been twice rejected.","35 USC 134 · 37 CFR 41.31 · MPEP 1204"],
+["Appeal brief due date","2 months from the notice of appeal, extendable under 1.136(a).","37 CFR 41.37 · MPEP 1205"],
+["Reply brief due date","2 months from the examiner's answer.","37 CFR 41.41 · MPEP 1208"],
+["What does an RCE require?","Prosecution must be closed, plus a submission and the RCE fee.","37 CFR 1.114 · MPEP 706.07(h)"],
+["IDS with no fee and no statement: when?","Within 3 months of filing, before the first action on the merits, or within 3 months of national stage entry.","37 CFR 1.97(b) · MPEP 609.04(b)"],
+["Responding to a restriction requirement","You must elect an invention even if you traverse; traversal must be distinctly argued.","37 CFR 1.143 · MPEP 818"],
+["Copendency requirement for a continuation or divisional","Must be filed before the parent patents, is abandoned, or proceedings terminate.","35 USC 120 · MPEP 211.01(b)"],
+["Deadline for a broadening reissue","Within 2 years from the grant of the original patent.","35 USC 251(d) · MPEP 1412.03"],
+["Small and micro entity fee reductions","Small entity 60% off; micro entity 80% off most fees.","35 USC 41(h) · MPEP 509.02"],
+["Reviving an application abandoned through unintentional delay","Petition with the required reply, fee and a statement of unintentional delay.","37 CFR 1.137(a) · MPEP 711.03(c)"],
+["Basis for ordering ex parte reexamination","A substantial new question of patentability based on patents or printed publications. Anyone may request.","35 USC 302–303 · MPEP 2216"],
+["When can an IPR petition be filed?","After the later of 9 months from grant or termination of a PGR; barred 1 year after service of an infringement complaint.","35 USC 311(c), 315(b)"],
+["Grounds allowed in an IPR","Only 102 and 103, and only on patents or printed publications.","35 USC 311(b)"],
+["PGR filing window and grounds","Within 9 months of grant; any invalidity ground except best mode.","35 USC 321(c), 282(b)"],
+["The four statutory categories of eligible subject matter","Process, machine, manufacture, composition of matter.","35 USC 101 · MPEP 2106.03"],
+["Subject-matter eligibility test framework","Alice/Mayo two-step: Step 2A (judicial exception, practical application) and Step 2B (significantly more).","MPEP 2106.04–2106.05"],
+["Graham v. John Deere factual inquiries for obviousness","Scope and content of the prior art, differences from the claims, level of ordinary skill, and secondary considerations.","MPEP 2141"],
+["Minimum for a non-provisional filing date (post-PLT)","A specification (claims not required) and any drawings, in English or another language.","35 USC 111(a) · MPEP 601.01(a)"],
+["Claim count that triggers excess claim fees","More than 3 independent claims or more than 20 total claims.","37 CFR 1.16(h)–(i) · MPEP 607"],
+["Track One prioritized examination claim limits","No more than 4 independent and 30 total claims, and no multiple dependent claims.","37 CFR 1.102(e) · MPEP 708.02(b)"],
+["How to overcome a nonstatutory (obviousness-type) double patenting rejection","File a terminal disclaimer, or argue the claims are patentably distinct.","37 CFR 1.321 · MPEP 804.02"],
+["Statutory basis for means-plus-function claims","35 USC 112(f). Construed to cover the structure in the spec and its equivalents.","MPEP 2181"],
+["Where is the duty of candor and good faith?","37 CFR 1.56. Owed by every individual associated with filing and prosecution.","MPEP 2001"],
+["Deadline to file a derivation petition","Within 1 year of first publication of a claim to the same or substantially the same invention.","35 USC 135(a) · MPEP 2310"],
+["When can the inventor's oath or declaration be postponed?","Until the issue fee is paid, if an ADS identifying the inventors is filed.","37 CFR 1.53(f)(3) · MPEP 602"],
+["Pre-grant publication timing","Promptly after 18 months from the earliest filing date claimed, unless a non-publication request was made at filing.","35 USC 122(b) · MPEP 1120"],
+["Foreign filing license: when is one needed?","Before filing abroad within 6 months of a U.S. filing on an invention made in the U.S.","35 USC 184 · MPEP 140"],
+];
+let cs=store.get("cards",{}),today=store.get("today",{d:"",n:0});
+const tstr=new Date().toDateString(); if(today.d!==tstr) today={d:tstr,n:0};
+const INT=[0,1,3,7,14,30];
+let showing=null,revealed=false;
+function cardState(i){return cs[i]||{b:0,due:0}}
+function unlocked(){return CARDS.map((_,i)=>i).filter(i=>allCards||learned(TAG[i]))}
+function dueList(){const now=Date.now();return unlocked().filter(i=>cardState(i).due<=now)}
+function renderCards(){
+  $("#allCards").checked=allCards;
+  const un=unlocked(),due=dueList(),mast=un.filter(i=>cardState(i).b>=5).length;
+  $("#sDue").textContent=due.length;$("#sMast").textContent=`${mast}/${un.length}`;$("#sToday").textContent=today.n;
+  const counts=[0,0,0,0,0,0];un.forEach(i=>counts[Math.min(cardState(i).b,5)]++);
+  $("#boxes").innerHTML=counts.map((c,b)=>`<span title="Box ${b}: ${c} cards"><i style="width:${un.length?c/un.length*100:0}%"></i></span>`).join("");
+  if(!un.length){$("#cardArea").innerHTML=`<div class="card done"><div><p style="color:var(--ink);font-weight:600">No cards unlocked yet</p><p>Cards open up as you mark lessons read in the Learn tab, so you only drill what you've already learned.</p><button class="btn primary" id="toLearn">Go to Learn</button></div></div>`;$("#toLearn").onclick=()=>{location.hash="learn"};return}
+  if(!due.length){$("#cardArea").innerHTML=`<div class="card done"><div><span class="stamp">ALLOWED</span><p>Nothing due right now. Come back tomorrow, or work practice questions and log misses.</p><button class="btn" id="cram">Review all cards anyway</button></div></div>`;
+    $("#cram").onclick=()=>{CARDS.forEach((_,i)=>{cs[i]={...cardState(i),due:0}});store.set("cards",cs);showing=null;renderCards()};return}
+  if(showing===null||!due.includes(showing)){showing=due[Math.floor(Math.random()*due.length)];revealed=false}
+  const [q,a,cite]=CARDS[showing],st=cardState(showing);
+  $("#cardArea").innerHTML=`<div class="card">
+    <div class="meta"><span class="chip">Box ${st.b}</span><span class="label tnum">${due.length} due</span></div>
+    <div class="q">${esc(q)}</div>
+    ${revealed?`<div class="a"><strong>${esc(a)}</strong><span class="cite">${esc(cite)}</span></div>
+      <div class="row"><button class="btn bad" id="cMiss">Missed it</button><button class="btn good" id="cGot">Got it</button></div>`
+     :`<div class="row"><button class="btn primary" id="cShow">Show answer</button></div>`}
+  </div>`;
+  if(revealed){$("#cMiss").onclick=()=>grade(false);$("#cGot").onclick=()=>grade(true)}else $("#cShow").onclick=()=>{revealed=true;renderCards()};
+}
+function grade(ok){const st=cardState(showing);const b=ok?Math.min(st.b+1,5):1;cs[showing]={b,due:Date.now()+(ok?INT[b]:1)*DAY - (ok?0:DAY*0.5)};
+  today.n++;store.set("cards",cs);store.set("today",today);showing=null;renderCards()}
+
+$("#allCards").addEventListener("change",e=>{allCards=e.target.checked;store.set("allCards",allCards);showing=null;renderCards()});
+
+/* ---------- MPEP ---------- */
+const MPEP=[
+["100","Secrecy, access, national security","Confidentiality, secrecy orders, foreign filing licenses.",["foreign filing license","secrecy order","184"],0],
+["200","Types and status of applications","Continuations, divisionals, CIPs, provisionals, benefit and priority claims.",["continuation","copendency","benefit claim","119(a)"],1],
+["300","Ownership and assignment","Assignments, recording, who may take action as applicant.",["assignee","recordation","3.73"],0],
+["400","Representative of applicant or owner","Powers of attorney, practitioners of record, withdrawal.",["power of attorney","1.32","withdraw"],0],
+["500","Receipt and handling of mail and papers","Filing dates for papers, certificates of mailing, Priority Mail Express, fees.",["1.8","1.10","certificate of mailing"],1],
+["600","Parts, form and content of application","Specification, claims, drawings, oath/declaration, ADS, filing-date requirements.",["application data sheet","1.53","missing parts"],1],
+["700","Examination of applications","Office actions, final rejections, replies, interviews, extensions, abandonment.",["final rejection","1.136","advisory action","abandonment"],1],
+["800","Restriction; double patenting","Restriction and election, linking claims, double patenting, terminal disclaimers.",["election","traverse","terminal disclaimer"],1],
+["900","Prior art, classification, search","Classification systems and search practice.",["CPC","search notes"],0],
+["1000","Matters decided by USPTO officials","Who decides petitions; petitions to the Director.",["1.181","petition"],0],
+["1100","SIR and pre-grant publication","Publication at 18 months, non-publication requests, provisional rights.",["non-publication","122(b)","provisional rights"],0],
+["1200","Appeal","Notice of appeal, briefs, examiner's answer, PTAB decisions.",["appeal brief","41.37","examiner's answer"],1],
+["1300","Allowance and issue","Notice of allowance, issue fee, withdrawal from issue.",["issue fee","1.311","withdrawal from issue"],0],
+["1400","Correction of patents","Reissue, certificates of correction, disclaimers.",["reissue","251","certificate of correction"],1],
+["1500","Design patents","Design claims, term, ornamentality, design-specific rules.",["ornamental","173","design claim"],0],
+["1600","Plant patents","Asexually reproduced plants.",["asexually"],0],
+["1700","Miscellaneous","Assorted procedures not covered elsewhere.",["miscellaneous"],0],
+["1800","Patent Cooperation Treaty","International applications, ISR, Chapter II, national stage entry.",["PCT","national stage","371","demand"],1],
+["1900","Protest","Third-party protests in pending applications.",["protest","1.291"],0],
+["2000","Duty of disclosure","Duty of candor, IDS requirements, inequitable conduct.",["1.56","duty of candor","IDS"],1],
+["2100","Patentability","101 eligibility, 102 novelty, 103 obviousness, 112 written description and enablement.",["2106","2141","prior art exception","112(f)"],1],
+["2200","Citation of prior art and ex parte reexam","Prior art citations and ex parte reexamination.",["substantial new question","reexamination","1.501"],1],
+["2300","Interference and derivation","Derivation proceedings and legacy interferences.",["derivation","135"],0],
+["2400","Biotechnology","Sequence listings and deposits of biological material.",["sequence listing","deposit"],0],
+["2500","Maintenance fees","Due dates, grace periods, acceptance of late payment.",["maintenance fee","surcharge","1.378"],1],
+["2600","Optional inter partes reexam","Legacy inter partes reexamination (largely superseded by IPR).",["inter partes reexamination"],0],
+["2700","Patent terms and extensions","Patent term, PTA, PTE, terminal disclaimer effects.",["patent term adjustment","154(b)","PTE"],1],
+["2800","Supplemental examination","Patent owner's request to consider new information.",["supplemental examination","257"],0],
+["2900","International design applications","Hague Agreement design applications.",["Hague","international design"],0],
+];
+function renderMpep(){const q=($("#mpepQ").value||"").toLowerCase();
+  $("#mpepList").innerHTML=MPEP.filter(m=>!q||m.join(" ").toLowerCase().includes(q)).map(([n,t,d,kw,h])=>`<div class="ch${h?" heavy":""}"><div class="num">${n}</div><div style="min-width:0"><div class="t">${esc(t)}</div><div class="d">${esc(d)}</div><div class="kw">${kw.map(k=>`<code>${esc(k)}</code>`).join("")}</div></div></div>`).join("")||`<p class="lede">No chapter matches that. Try a broader word.</p>`}
+$("#mpepQ").addEventListener("input",renderMpep);
+
+/* ---------- Miss log ---------- */
+let log=store.get("log",null);
+if(log===null){log=[
+ {id:1,ex:true,topic:"Extension of time to file an appeal brief",sec:"1205",term:"appeal brief",rule:"Due 2 months from the notice of appeal; extendable under 1.136(a).",t:Date.now()-DAY},
+ {id:2,ex:true,topic:"IDS filed after first action, before final",sec:"609.04(b)",term:"1.97(c)",rule:"Needs either the 1.97(e) statement or the fee.",t:Date.now()-2*DAY}];store.set("log",log)}
+function chapterOf(sec){const m=String(sec).match(/^(\d{3,4})/);if(!m)return"—";const n=+m[1];return n>=1000?String(Math.floor(n/100)*100):String(Math.floor(n/100)*100)}
+function renderLog(){
+  const t={};log.forEach(e=>{const c=chapterOf(e.sec);t[c]=(t[c]||0)+1});
+  const top=Object.entries(t).sort((a,b)=>b[1]-a[1]);
+  $("#tally").innerHTML=log.length?`<span class="label" style="align-self:center">Misses by chapter</span>`+top.map(([c,n])=>`<span class="chip ${n>=3?"bad":n>=2?"warn":""} tnum">${c} · ${n}</span>`).join(""):"";
+  $("#logList").innerHTML=log.length?log.slice().sort((a,b)=>b.t-a.t).map(e=>`<div class="entry">
+    <div class="top"><span class="topic">${esc(e.topic)}${e.ex?' <span class="chip">Example</span>':""}</span>
+    <span class="row">${e.sec?`<span class="sec tnum">§ ${esc(e.sec)}</span>`:""}<button class="x" data-del="${e.id}" aria-label="Delete entry">Delete</button></span></div>
+    ${e.term?`<p><span class="label">Search</span> <code style="font-family:var(--mono)">${esc(e.term)}</code></p>`:""}
+    ${e.rule?`<p>${esc(e.rule)}</p>`:""}</div>`).join(""):`<p class="lede">No misses logged yet. After your first practice set, add each wrong answer here.</p>`;
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{log=log.filter(e=>e.id!=b.dataset.del);store.set("log",log);renderLog()});
+}
+$("#logForm").addEventListener("submit",e=>{e.preventDefault();
+  log.push({id:Date.now(),topic:$("#lTopic").value.trim(),sec:$("#lSec").value.trim(),term:$("#lTerm").value.trim(),rule:$("#lRule").value.trim(),t:Date.now()});
+  store.set("log",log);e.target.reset();$("#logMsg").textContent="Added";setTimeout(()=>$("#logMsg").textContent="",1500);renderLog()});
+
+/* ---------- Mock ---------- */
+let mk=store.get("mock",{full:false,start:0,n:0,paused:0,elapsed:0});
+const fmt=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return`${h}:${String(m).padStart(2,"0")}:${String(x).padStart(2,"0")}`};
+const mmss=s=>`${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`;
+function mockCfg(){return mk.full?{q:100,sec:6*3600}:{q:50,sec:3*3600}}
+function elapsed(){return mk.start?mk.elapsed+(Date.now()-mk.start)/1000:mk.elapsed}
+function renderMock(){
+  const {q,sec}=mockCfg(),el=elapsed(),left=sec-el;
+  $("#m50").setAttribute("aria-pressed",!mk.full);$("#m100").setAttribute("aria-pressed",mk.full);
+  $("#mLeft").textContent=fmt(left);$("#mN").textContent=`${mk.n}`;
+  $("#mBar").style.width=`${Math.min(100,mk.n/q*100)}%`;$("#mTarget").style.left=`${Math.min(100,el/sec*100)}%`;
+  $("#mPace").textContent=`Target ${mmss(sec/q)} per question`;
+  $("#mAvg").textContent=mk.n?`Your pace ${mmss(el/mk.n)}`:"Your pace —";
+  $("#mStart").textContent=mk.start?"Pause":(mk.elapsed?"Resume":"Start");
+  const chip=$("#paceChip"),expected=el/sec*q,diff=mk.n-expected;
+  if(!mk.start&&!mk.elapsed){chip.className="chip";chip.textContent="Not started"}
+  else if(left<=0){chip.className="chip bad";chip.textContent="Time"}
+  else if(diff>=-1){chip.className="chip good";chip.textContent=diff>=1?`Ahead by ${Math.floor(diff)}`:"On pace"}
+  else if(diff>=-4){chip.className="chip warn";chip.textContent=`Behind by ${Math.ceil(-diff)}`}
+  else{chip.className="chip bad";chip.textContent=`Behind by ${Math.ceil(-diff)}`}
+}
+$("#m50").onclick=()=>{mk.full=false;store.set("mock",mk);renderMock()};
+$("#m100").onclick=()=>{mk.full=true;store.set("mock",mk);renderMock()};
+$("#mStart").onclick=()=>{if(mk.start){mk.elapsed=elapsed();mk.start=0}else mk.start=Date.now();store.set("mock",mk);renderMock()};
+$("#mReset").onclick=()=>{mk={full:mk.full,start:0,n:0,elapsed:0};store.set("mock",mk);renderMock()};
+$("#mPlus").onclick=()=>{if(mk.n<mockCfg().q)mk.n++;store.set("mock",mk);renderMock()};
+$("#mMinus").onclick=()=>{if(mk.n>0)mk.n--;store.set("mock",mk);renderMock()};
+setInterval(()=>{if(mk.start&&!$("#v-mock").hidden)renderMock()},1000);
+
+let scores=store.get("scores",[]);
+function renderScores(){$("#scoreRows").innerHTML=scores.length?scores.slice().reverse().map((s,i)=>{const p=Math.round(s.c/s.t*100);
+  const cls=p>=80?"good":p>=70?"warn":"bad",lbl=p>=80?"Ready":p>=70?"Passing, thin margin":"Below 70%";
+  return`<tr><td>${new Date(s.d).toLocaleDateString()}</td><td class="tnum">${s.c}/${s.t} · ${p}%</td><td><span class="chip ${cls}">${lbl}</span></td><td><button class="x" style="background:none;border:0;color:var(--muted);cursor:pointer" data-sd="${scores.length-1-i}">Delete</button></td></tr>`}).join("")
+  :`<tr><td colspan="4" style="color:var(--muted)">Log each timed mock here. Aim for 80% or higher before you book the exam.</td></tr>`;
+  document.querySelectorAll("[data-sd]").forEach(b=>b.onclick=()=>{scores.splice(+b.dataset.sd,1);store.set("scores",scores);renderScores()})}
+$("#scoreForm").addEventListener("submit",e=>{e.preventDefault();const c=+$("#scQ").value,t=+$("#scT").value||100;if(!c||c>t)return;scores.push({c,t,d:Date.now()});store.set("scores",scores);$("#scQ").value="";renderScores()});
+
+/* ---------- Plan ---------- */
+const PLAN=[
+["Week 1","Paperwork","Pull UIUC transcripts, confirm Category A or B, file the OED application ($118)."],
+["Week 1","Get the materials","Download the tested MPEP edition as a searchable PDF. Buy a standalone question bank."],
+["Weeks 1–2","Breadth pass","Read all eight Learn lessons in order, one or two a day. No testing yet; just build the map."],
+["Week 3","Depth: lessons 1–3","Read the MPEP sections listed under lessons 1–3. Start flashcards for those topics."],
+["Week 4","Depth: lesson 4","Patentability (2100) is the largest area. Take two passes through it."],
+["Week 5","Depth: lessons 5–6","Families, PCT and prosecution mechanics. Practice counting deadlines by hand."],
+["Week 6","Depth: lessons 7–8","Post-grant procedures and ethics. Now all flashcards are unlocked."],
+["Weeks 7–8","Untimed practice questions","20–30 questions a day by topic, MPEP open. Log every miss. Schedule the exam once approved."],
+["Weeks 9–10","Timed half mocks","Two or three 50-question, 3-hour sets a week. Review every miss in the log."],
+["Weeks 11–12","Full mocks","Full 100-question sessions. Book when you're steady at 80%+."],
+["Exam day","Sit the exam","Answer easy questions from memory, flag the rest, and search the MPEP on the second pass."],
+];
+let plan=store.get("plan",{});
+function renderPlan(){$("#planList").innerHTML=PLAN.map(([w,t,d],i)=>`<label class="week${plan[i]?" checked":""}" style="color:inherit"><input type="checkbox" id="p${i}" data-p="${i}" ${plan[i]?"checked":""}><div><div class="w">${w}</div><div class="t">${t}</div><div class="d">${d}</div></div></label>`).join("");
+  document.querySelectorAll("[data-p]").forEach(c=>c.onchange=()=>{plan[c.dataset.p]=c.checked;store.set("plan",plan);renderPlan()})}
+
+/* ---------- Routing ---------- */
+const VIEWS=["learn","cards","mpep","misses","mock","plan"];
+function show(v){if(!VIEWS.includes(v))v="learn";VIEWS.forEach(x=>{$("#v-"+x).hidden=x!==v;document.querySelector(`nav [data-v="${x}"]`).setAttribute("aria-selected",x===v)});
+  ({learn:renderLearn,cards:renderCards,mpep:renderMpep,misses:renderLog,mock:()=>{renderMock();renderScores()},plan:renderPlan})[v]()}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{if(b.dataset.v==="learn"){openMod=null;if(location.hash==="#learn")renderLearn()}location.hash=b.dataset.v});
+window.addEventListener("hashchange",()=>show(location.hash.slice(1)));
+show(location.hash.slice(1));
+</script>
