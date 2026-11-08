@@ -5,6 +5,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 VERSION = open(os.path.join(HERE, "VERSION")).read().strip()
 BUILT = datetime.date.today().strftime("%b %-d, %Y")
 AUDIO = json.load(open(os.path.join(HERE, "audio.json")))
+import subprocess
+GUIDE = None
+_png = os.path.join(HERE, "src", "assets", "infographic.png")
+if os.path.exists(_png) and os.path.exists(os.path.join(HERE, "infographic.json")):
+    GUIDE = json.load(open(os.path.join(HERE, "infographic.json")))
+    for args in (["-quality", "82", "infographic.webp"], ["-resize", "1200x", "-quality", "78", "infographic-thumb.webp"]):
+        subprocess.run(["magick", _png] + args[:-1] + [os.path.join(HERE, "site", args[-1])], check=True)
 s = open(src, encoding="utf-8").read()
 
 I = lambda d: f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{d}</svg>'
@@ -185,6 +192,13 @@ input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{o
 .listen .lhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .listen audio{width:100%;height:44px;border-radius:999px;color-scheme:light dark}
 .btn.speed{padding:6px 12px;border-radius:999px;font:600 .82rem var(--mono);min-width:58px;flex:0 0 auto}
+.guide{display:block;margin:0 0 18px;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;text-decoration:none;color:inherit;transition:box-shadow .2s,transform .2s}
+.guide:hover{box-shadow:var(--shadow-lg);transform:translateY(-1px)}
+.guide img{display:block;width:100%;height:auto;aspect-ratio:1200/670;object-fit:cover;background:var(--tint);border-bottom:1px solid var(--rule)}
+.guide .gbody{padding:14px 18px 16px;display:grid;gap:2px}
+.guide .lt{font-weight:600}.guide .ld{color:var(--muted);font-size:.84rem}
+.guide .gwarn{margin-top:10px;font-size:.82rem;line-height:1.5;background:var(--warn-bg);color:var(--ink);border-left:3px solid var(--warn);border-radius:0 8px 8px 0;padding:8px 12px}
+.guide .gwarn b{color:var(--warn)}
 @media (prefers-reduced-motion:reduce){section:not([hidden]){animation:none}}
 </style>
 '''
@@ -239,6 +253,17 @@ player = (
  '  if(e&&f)return`<div class="listen has-audio"><div class="lhead"><div style="min-width:0"><span class="label">${lbl}</span><div class="lt">${esc(e.name)}</div><div class="ld">${esc(e.len)}</div></div><button class="btn speed" type="button" data-speed aria-label="Playback speed">${spd()}×</button></div><audio data-ep="${n}" controls preload="metadata" src="${AUDIO_BASE+f}"></audio></div>`;\n'
  + fallback
 )
+if GUIDE:
+    player += (
+     '\nconst GUIDE=' + json.dumps(GUIDE) + ';\n'
+     'function guideCard(){const v="?v=' + VERSION + '";return`<a class="guide" href="/infographic.webp${v}" target="_blank" rel="noopener">'
+     '<img src="/infographic-thumb.webp${v}" alt="${esc(GUIDE.title)}" loading="lazy" width="1200" height="670">'
+     '<div class="gbody"><span class="label">Visual overview</span><div class="lt">${esc(GUIDE.title)}</div>'
+     '<div class="ld">Tap to open full size and zoom in</div>'
+     '<div class="gwarn"><b>Heads up:</b> ${esc(GUIDE.source)}. ${esc(GUIDE.warning)}</div></div></a>`}'
+    )
+    assert s.count("${listenCard(0)}") == 1
+    s = s.replace("${listenCard(0)}", "${listenCard(0)}${guideCard()}", 1)
 s = s[:m.start()] + player + s[m.end():]
 
 audio_js = r"""
